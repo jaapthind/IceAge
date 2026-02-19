@@ -3,24 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Monster Penalty Elite</title>
+    <title>Monster Penalty: Drag & Aim</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #064e3b; font-family: 'Arial Black', sans-serif; touch-action: none; }
+        body { margin: 0; overflow: hidden; background: #022c22; font-family: 'Arial Black', sans-serif; touch-action: none; }
         #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .hud { position: absolute; color: white; text-shadow: 4px 4px 0px #000; font-style: italic; font-weight: 900; }
-        #power-container { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 400px; height: 40px; background: rgba(0,0,0,0.6); border: 4px solid #fff; display: none; border-radius: 20px; overflow: hidden; }
-        #power-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #22c55e, #eab308, #ef4444); }
-        #stats { top: 20px; left: 20px; font-size: 35px; }
-        #center-msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; text-align: center; display: none; }
-        #controls-hint { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 20px; }
+        .hud { position: absolute; color: #facc15; text-shadow: 3px 3px 0px #000; font-style: italic; font-weight: 900; }
+        #stats { top: 20px; left: 20px; font-size: 30px; color: white; }
+        #power-ui { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); font-size: 24px; display: none; }
+        #msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; text-align: center; display: none; }
+        #hint { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.6); font-size: 18px; }
     </style>
 </head>
 <body>
 <div id="ui">
-    <div id="stats" class="hud">GOALS: 0 | ATTEMPTS: 0</div>
-    <div id="center-msg" class="hud">GOAL!</div>
-    <div id="power-container"><div id="power-bar"></div></div>
-    <div id="controls-hint" class="hud">HOLD TO CHARGE & AIM • RELEASE TO FIRE</div>
+    <div id="stats" class="hud">GOALS: 0</div>
+    <div id="msg" class="hud">GOAL!</div>
+    <div id="power-ui" class="hud">POWER: <span id="p-val">0</span>%</div>
+    <div id="hint" class="hud">DRAG BACK FROM BALL TO AIM & POWER UP</div>
 </div>
 <canvas id="game"></canvas>
 
@@ -34,8 +33,6 @@ import * as THREE from 'three';
 // --- INITIALIZATION ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x022c22);
-scene.fog = new THREE.Fog(0x022c22, 30, 150);
-
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -43,165 +40,142 @@ renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
 // --- LIGHTING ---
-const ambient = new THREE.AmbientLight(0xffffff, 0.7);
-scene.add(ambient);
-const stadiumLight = new THREE.SpotLight(0xffffff, 2000);
-stadiumLight.position.set(0, 40, 20);
-stadiumLight.angle = Math.PI / 4;
-stadiumLight.castShadow = true;
-scene.add(stadiumLight);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const spot = new THREE.SpotLight(0xffffff, 5000);
+spot.position.set(0, 50, 20);
+spot.castShadow = true;
+scene.add(spot);
 
-// --- STADIUM & GOAL ---
-const textureLoader = new THREE.TextureLoader();
-const grass = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 200),
-    new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.8 })
-);
+// --- STADIUM ---
+const grass = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x14532d }));
 grass.rotation.x = -Math.PI / 2;
 grass.receiveShadow = true;
 scene.add(grass);
 
-// Realistic Goal with Net
-const goalGroup = new THREE.Group();
+// Goal Structure
+const goal = new THREE.Group();
 const postMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-const netMat = new THREE.MeshStandardMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.3 });
-
-const createPost = (w, h, d, x, y, z) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), postMat);
-    m.position.set(x, y, z); m.castShadow = true; goalGroup.add(m);
+const createPart = (w,h,d,x,y,z) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), postMat);
+    m.position.set(x,y,z); m.castShadow = true; goal.add(m);
 };
+createPart(0.6, 12, 0.6, -12, 6, -40);
+createPart(0.6, 12, 0.6, 12, 6, -40);
+createPart(24.6, 0.6, 0.6, 0, 12, -40);
+scene.add(goal);
 
-createPost(0.5, 10, 0.5, -10, 5, -30); // Left
-createPost(0.5, 10, 0.5, 10, 5, -30);  // Right
-createPost(20.5, 0.5, 0.5, 0, 10, -30); // Crossbar
-const net = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 5), netMat);
-net.position.set(0, 5, -32.5);
-goalGroup.add(net);
-scene.add(goalGroup);
-
-// --- BALL & AIMER ---
-const ball = new THREE.Mesh(
-    new THREE.SphereGeometry(0.8, 32, 32),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 })
-);
-ball.position.set(0, 0.8, 10);
+// Ball
+const ball = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+ball.position.set(0, 0.8, 15);
 ball.castShadow = true;
 scene.add(ball);
 
-// The Trajectory Line (Aimer)
-const lineMat = new THREE.LineBasicMaterial({ color: 0xffff00 });
-let aimerPoints = [];
+// Aimer Line
 let aimerLine = new THREE.Line();
+const aimerMat = new THREE.LineBasicMaterial({ color: 0xfacc15, linewidth: 3 });
 
-// --- GAME STATE ---
-let power = 0;
-let isCharging = false;
+// --- INTERACTION LOGIC ---
+let isDragging = false;
 let isLaunched = false;
 let goals = 0;
-let attempts = 0;
-let velocity = new THREE.Vector3();
-let aimAngle = 0;
+let dragStart = new THREE.Vector2();
+let dragCurrent = new THREE.Vector2();
+let launchVec = new THREE.Vector3();
+let currentPower = 0;
 
-camera.position.set(0, 6, 25);
-camera.lookAt(0, 3, -10);
+camera.position.set(0, 8, 35);
+camera.lookAt(0, 4, -10);
 
-const powerBar = document.getElementById('power-bar');
-const powerCont = document.getElementById('power-container');
-const centerMsg = document.getElementById('center-msg');
+const pVal = document.getElementById('p-val');
+const pUI = document.getElementById('power-ui');
+const msg = document.getElementById('msg');
 
-function updateAimer() {
-    scene.remove(aimerLine);
-    if (isLaunched) return;
-
-    aimerPoints = [];
-    let tempPos = ball.position.clone();
-    let tempVel = new THREE.Vector3(
-        Math.sin(aimAngle) * (power * 0.1),
-        (power * 0.15),
-        - (power * 0.3)
-    );
-
-    for (let i = 0; i < 20; i++) {
-        aimerPoints.push(tempPos.clone());
-        tempPos.add(tempVel);
-        tempVel.y -= 0.015; // Gravity preview
-    }
-    const geo = new THREE.BufferGeometry().setFromPoints(aimerPoints);
-    aimerLine = new THREE.Line(geo, lineMat);
-    scene.add(aimerLine);
-}
-
-// --- CONTROLS ---
-const handleDown = () => { if(!isLaunched) { isCharging = true; powerCont.style.display = 'block'; } };
-const handleUp = () => {
-    if(isCharging) {
-        isCharging = false;
-        isLaunched = true;
-        attempts++;
-        powerCont.style.display = 'none';
-        velocity.set(Math.sin(aimAngle) * (power * 0.1), (power * 0.2), - (power * 0.4));
-        updateStats();
-    }
+// Mouse/Touch translation
+const getMousePos = (e) => {
+    const x = (e.touches ? e.touches[0].clientX : e.clientX);
+    const y = (e.touches ? e.touches[0].clientY : e.clientY);
+    return new THREE.Vector2(x, y);
 };
 
-window.addEventListener('mousedown', handleDown);
-window.addEventListener('mouseup', handleUp);
-window.addEventListener('touchstart', (e) => { e.preventDefault(); handleDown(); });
-window.addEventListener('touchend', handleUp);
+window.addEventListener('mousedown', (e) => {
+    if (isLaunched) return;
+    isDragging = true;
+    dragStart = getMousePos(e);
+    pUI.style.display = 'block';
+});
 
-function updateStats() {
-    document.getElementById('stats').innerText = `GOALS: ${goals} | ATTEMPTS: ${attempts}`;
-}
+window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    dragCurrent = getMousePos(e);
+    
+    // Calculate vector from drag
+    const dx = dragStart.x - dragCurrent.x;
+    const dy = dragStart.y - dragCurrent.y;
+    
+    currentPower = Math.min(Math.sqrt(dx*dx + dy*dy) * 0.5, 100);
+    pVal.innerText = Math.floor(currentPower);
 
-function resetBall() {
+    // Update 3D Aimer
+    scene.remove(aimerLine);
+    const points = [];
+    let tempPos = ball.position.clone();
+    let tempVel = new THREE.Vector3(dx * 0.02, dy * 0.04, -currentPower * 0.3);
+    
+    for(let i=0; i<25; i++) {
+        points.push(tempPos.clone());
+        tempPos.add(tempVel);
+        tempVel.y -= 0.015; // Gravity
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    aimerLine = new THREE.Line(geo, aimerMat);
+    scene.add(aimerLine);
+    
+    launchVec.copy(new THREE.Vector3(dx * 0.02, dy * 0.04, -currentPower * 0.3));
+});
+
+window.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    isLaunched = true;
+    pUI.style.display = 'none';
+    scene.remove(aimerLine);
+});
+
+// --- GAME LOOP ---
+function reset() {
     isLaunched = false;
-    ball.position.set(0, 0.8, 10);
-    velocity.set(0,0,0);
-    power = 0;
-    centerMsg.style.display = 'none';
+    ball.position.set(0, 0.8, 15);
+    launchVec.set(0,0,0);
+    msg.style.display = 'none';
 }
 
-// --- MAIN LOOP ---
 function animate() {
     requestAnimationFrame(animate);
-
-    if (isCharging) {
-        power = (power + 1.2) % 100; // Oscillating power
-        powerBar.style.width = power + "%";
-        aimAngle = Math.sin(Date.now() * 0.002) * 0.5; // Auto-aim sway
-        updateAimer();
-    }
-
+    
     if (isLaunched) {
-        ball.position.add(velocity);
-        velocity.y -= 0.012; // Realistic Gravity
-        ball.rotation.x += velocity.z * 0.2;
-        
-        // Ground physics
+        ball.position.add(launchVec);
+        launchVec.y -= 0.015; // Gravity
+        ball.rotation.x += launchVec.z * 0.1;
+
         if (ball.position.y < 0.8) {
             ball.position.y = 0.8;
-            velocity.y *= -0.4; // Bounce
-            velocity.z *= 0.98; // Grass friction
+            launchVec.y *= -0.4;
         }
 
-        // Goal Check
-        if (ball.position.z < -30 && ball.position.z > -32) {
-            if (Math.abs(ball.position.x) < 10 && ball.position.y < 10) {
-                if (!centerMsg.style.display || centerMsg.style.display === 'none') {
-                    goals++;
-                    centerMsg.innerText = "GOAL!";
-                    centerMsg.style.display = 'block';
-                    updateStats();
-                    setTimeout(resetBall, 2000);
-                }
-            } else if (ball.position.z < -31) {
-                centerMsg.innerText = "MISS!";
-                centerMsg.style.display = 'block';
-                setTimeout(resetBall, 2000);
+        // Infinite Goal Logic
+        if (ball.position.z < -40) {
+            if (Math.abs(ball.position.x) < 12 && ball.position.y < 12) {
+                goals++;
+                document.getElementById('stats').innerText = "GOALS: " + goals;
+                msg.innerText = "GOAL!";
+            } else {
+                msg.innerText = "MISS!";
             }
+            msg.style.display = 'block';
+            isLaunched = false;
+            setTimeout(reset, 1500);
         }
     }
-
     renderer.render(scene, camera);
 }
 
