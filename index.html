@@ -3,42 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MONSTER PENALTY: ELITE SERIES</title>
+    <title>ULTRA PENALTY ELITE 2026</title>
     <style>
-        :root { --neon: #00ffcc; --gold: #facc15; }
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Inter', sans-serif; touch-action: none; }
+        :root { --accent: #00f2ff; --gold: #ffd700; --danger: #ff4444; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         
-        /* HUD DESIGN */
-        #hud { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
-        .score-board { position: absolute; top: 30px; left: 30px; background: rgba(0,0,0,0.85); padding: 20px; border-radius: 8px; border-left: 5px solid var(--neon); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 2px; margin-bottom: 5px; }
-        .value { font-size: 40px; font-weight: 900; color: #fff; font-style: italic; display: block; }
+        /* OVERLAY HUD */
+        #hud { position: absolute; inset: 0; pointer-events: none; z-index: 10; color: #fff; }
         
-        /* POWER METER */
-        #power-container { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); width: 350px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); overflow: hidden; display: none; }
-        #power-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #00ffcc, #facc15, #ff4444); box-shadow: 0 0 20px var(--neon); }
+        .score-card { position: absolute; top: 40px; left: 40px; background: rgba(0,0,0,0.8); padding: 20px 35px; border-radius: 4px; border-left: 6px solid var(--accent); backdrop-filter: blur(10px); }
+        .score-label { font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: #888; }
+        .score-num { font-size: 48px; font-weight: 900; font-style: italic; display: block; }
+
+        /* POWER INDICATOR */
+        #power-system { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 350px; opacity: 0; transition: opacity 0.2s; }
+        .bar-outer { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; border: 1px solid rgba(255,255,255,0.3); overflow: hidden; }
+        #bar-inner { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--gold), var(--danger)); box-shadow: 0 0 20px var(--accent); }
 
         /* ANNOUNCER */
-        #announcer { position: absolute; top: 40%; width: 100%; text-align: center; opacity: 0; transform: scale(0.8); transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #announcer { position: absolute; top: 35%; width: 100%; text-align: center; opacity: 0; transform: scale(0.5); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         #announcer.active { opacity: 1; transform: scale(1.1); }
-        .msg-big { font-size: 120px; font-weight: 900; color: #fff; text-shadow: 0 0 40px rgba(0,0,0,0.8); font-style: italic; -webkit-text-stroke: 2px #000; }
+        .msg { font-size: 100px; font-weight: 900; font-style: italic; -webkit-text-stroke: 2px black; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <div id="hud">
-    <div class="score-board">
-        <div class="label">Total Goals</div>
-        <div id="score" class="value">0</div>
-        <div class="label" style="margin-top:10px">Difficulty Level</div>
-        <div id="diff" class="value" style="font-size: 20px; color: var(--neon);">AMATEUR</div>
+    <div class="score-card">
+        <span class="score-label">Streak Scored</span>
+        <span id="score-val" class="score-num">0</span>
     </div>
 
     <div id="announcer">
-        <div id="msg" class="msg-big">GOAL!</div>
+        <div id="msg-text" class="msg">GOAL!</div>
     </div>
 
-    <div id="power-container"><div id="power-fill"></div></div>
+    <div id="power-system">
+        <div class="score-label" style="text-align: center; margin-bottom: 10px;">Shot Power</div>
+        <div class="bar-outer"><div id="bar-inner"></div></div>
+    </div>
 </div>
 
 <script type="importmap">
@@ -48,34 +51,40 @@
 <script type="module">
 import * as THREE from 'three';
 
-/** * ADVANCED GAME ENGINE 
+/**
+ * ENGINE CONFIGURATION
  */
-class PenaltyGame {
+const SETTINGS = {
+    GRAVITY: -0.015,
+    AIR_DRAG: 0.993,
+    MAGNUS: 0.0006, // Determines how much the ball curves
+    BOUNCE: 0.45,
+    GOAL_Z: -50,
+    BALL_START: new THREE.Vector3(0, 0.55, 15)
+};
+
+class GameEngine {
     constructor() {
-        this.initScene();
-        this.initLights();
-        this.initWorld();
-        this.initBall();
-        this.initGoalie();
+        this.initCore();
+        this.initStadium();
+        this.initActors();
         this.initInput();
+        this.resetGame();
         
         this.clock = new THREE.Clock();
         this.score = 0;
-        this.state = 'IDLE'; // IDLE, AIM, FLIGHT, RESET
-        this.vel = new THREE.Vector3();
-        this.ballRadius = 0.55;
-        this.goalZ = -40;
+        this.state = 'READY'; // READY, AIMING, FLIGHT, RESOLVED
         
         this.animate();
     }
 
-    initScene() {
+    initCore() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x011a14);
-        this.scene.fog = new THREE.Fog(0x011a14, 20, 100);
+        this.scene.background = new THREE.Color(0x020617);
+        this.scene.fog = new THREE.FogExp2(0x020617, 0.012);
 
-        this.camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 6, 20);
+        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera.position.set(0, 5, 30);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -83,230 +92,207 @@ class PenaltyGame {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
+
+        // Lighting
+        const amb = new THREE.AmbientLight(0xffffff, 0.4);
+        this.scene.add(amb);
+
+        this.floodlight = new THREE.DirectionalLight(0xffffff, 1.5);
+        this.floodlight.position.set(10, 40, 20);
+        this.floodlight.castShadow = true;
+        this.floodlight.shadow.mapSize.set(2048, 2048);
+        this.scene.add(this.floodlight);
     }
 
-    initLights() {
-        this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-        const spotlight = new THREE.SpotLight(0xffffff, 1500, 100, 0.6, 0.5);
-        spotlight.position.set(0, 40, 10);
-        spotlight.castShadow = true;
-        spotlight.shadow.mapSize.set(2048, 2048);
-        this.scene.add(spotlight);
-    }
-
-    initWorld() {
-        // Striped Pitch Texture
+    initStadium() {
+        // Procedural Grass
         const canvas = document.createElement('canvas');
         canvas.width = 512; canvas.height = 512;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#15803d'; ctx.fillRect(0,0,512,512);
+        ctx.fillStyle = '#14532d'; ctx.fillRect(0,0,512,512);
         ctx.fillStyle = '#166534'; ctx.fillRect(0,0,512,256);
-        const grassTex = new THREE.CanvasTexture(canvas);
-        grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
-        grassTex.repeat.set(1, 20);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(1, 15);
 
-        const pitch = new THREE.Mesh(
-            new THREE.PlaneGeometry(100, 200),
-            new THREE.MeshStandardMaterial({ map: grassTex })
-        );
-        pitch.rotation.x = -Math.PI/2;
+        const pitch = new THREE.Mesh(new THREE.PlaneGeometry(100, 200), new THREE.MeshStandardMaterial({ map: tex }));
+        pitch.rotation.x = -Math.PI / 2;
         pitch.receiveShadow = true;
         this.scene.add(pitch);
 
-        // Professional Goal Structure
-        const postMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.2, roughness: 0.1 });
-        const postGeo = new THREE.CylinderGeometry(0.3, 0.3, 10, 16);
+        // Goal Structure
+        const postMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.1 });
+        const postGeo = new THREE.CylinderGeometry(0.35, 0.35, 10, 20);
         
-        this.goalGroup = new THREE.Group();
-        const lp = new THREE.Mesh(postGeo, postMat); lp.position.set(-10, 5, this.goalZ);
-        const rp = new THREE.Mesh(postGeo, postMat); rp.position.set(10, 5, this.goalZ);
-        const cb = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 20, 16), postMat);
-        cb.rotation.z = Math.PI/2; cb.position.set(0, 10, this.goalZ);
+        this.goal = new THREE.Group();
+        const lp = new THREE.Mesh(postGeo, postMat); lp.position.set(-10, 5, SETTINGS.GOAL_Z);
+        const rp = new THREE.Mesh(postGeo, postMat); rp.position.set(10, 5, SETTINGS.GOAL_Z);
+        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 20.7, 20), postMat);
+        bar.rotation.z = Math.PI/2; bar.position.set(0, 10, SETTINGS.GOAL_Z);
         
-        [lp, rp, cb].forEach(m => { m.castShadow = true; this.goalGroup.add(m); });
-        this.scene.add(this.goalGroup);
+        [lp, rp, bar].forEach(m => { m.castShadow = true; this.goal.add(m); });
+        this.scene.add(this.goal);
     }
 
-    initBall() {
-        // High-Quality Ball Geometry
-        const ballCanvas = document.createElement('canvas');
-        ballCanvas.width = 256; ballCanvas.height = 256;
-        const bCtx = ballCanvas.getContext('2d');
-        bCtx.fillStyle = '#fff'; bCtx.fillRect(0,0,256,256);
-        bCtx.fillStyle = '#000';
-        for(let i=0; i<15; i++){
-            bCtx.beginPath(); bCtx.arc(Math.random()*256, Math.random()*256, 30, 0, Math.PI*2); bCtx.fill();
-        }
-        
+    initActors() {
+        // The Ball
         this.ball = new THREE.Mesh(
-            new THREE.SphereGeometry(this.ballRadius, 64, 64),
-            new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(ballCanvas), roughness: 0.3 })
+            new THREE.SphereGeometry(0.55, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 })
         );
         this.ball.castShadow = true;
-        this.ball.position.set(0, this.ballRadius, 15);
         this.scene.add(this.ball);
 
-        // Aimer Line
-        this.aimer = new THREE.Line(
-            new THREE.BufferGeometry(),
-            new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.6 })
-        );
-        this.scene.add(this.aimer);
-    }
-
-    initGoalie() {
-        this.goalie = new THREE.Group();
+        // The Goalkeeper
+        this.keeper = new THREE.Group();
         const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.7, 1.8, 8, 16), new THREE.MeshStandardMaterial({color: 0xef4444}));
         body.position.y = 1.6;
-        this.goalie.add(body);
-        this.goalie.position.set(0, 0, this.goalZ + 1);
-        this.scene.add(this.goalie);
-        this.goalieTargetX = 0;
+        this.keeper.add(body);
+        this.keeper.position.set(0, 0, SETTINGS.GOAL_Z + 1.5);
+        this.scene.add(this.keeper);
+
+        // Aimer Trajectory
+        this.aimerGeo = new THREE.BufferGeometry();
+        this.aimer = new THREE.Line(this.aimerGeo, new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.5 }));
+        this.scene.add(this.aimer);
     }
 
     initInput() {
         this.dragStart = new THREE.Vector2();
-        const pFill = document.getElementById('power-fill');
-        const pCont = document.getElementById('power-container');
+        this.vel = new THREE.Vector3();
+        this.spin = 0;
 
-        const handleStart = (x, y) => {
-            if(this.state !== 'IDLE') return;
-            this.state = 'AIM';
+        const onStart = (x, y) => {
+            if(this.state !== 'READY') return;
+            this.state = 'AIMING';
             this.dragStart.set(x, y);
-            pCont.style.display = 'block';
+            document.getElementById('power-system').style.opacity = '1';
         };
 
-        const handleMove = (x, y) => {
-            if(this.state !== 'AIM') return;
+        const onMove = (x, y) => {
+            if(this.state !== 'AIMING') return;
             const dx = this.dragStart.x - x;
             const dy = this.dragStart.y - y;
-            const power = Math.min(Math.sqrt(dx*dx + dy*dy) * 0.5, 100);
+            const power = Math.min(Math.sqrt(dx*dx + dy*dy) * 0.45, 100);
             
-            pFill.style.width = power + '%';
+            document.getElementById('bar-inner').style.width = power + '%';
             
-            // PHYSICS MATH: Tripled velocity for arcade feel
-            this.vel.set(dx * 0.008, dy * 0.012, -power * 0.025);
-            this.drawTrajectory();
+            // Physics Vector Calculation
+            this.vel.set(dx * 0.005, dy * 0.008, -power * 0.02);
+            this.spin = dx * 0.0008; // Curve factor
+            
+            this.updateTrajectory();
         };
 
-        const handleEnd = () => {
-            if(this.state !== 'AIM') return;
+        const onEnd = () => {
+            if(this.state !== 'AIMING') return;
             this.state = 'FLIGHT';
-            pCont.style.display = 'none';
+            document.getElementById('power-system').style.opacity = '0';
             this.aimer.geometry.setFromPoints([]);
             
-            // AI REACTION LOGIC: Predict landing X
-            const timeToGoal = Math.abs((this.goalZ - this.ball.position.z) / this.vel.z);
-            this.goalieTargetX = (this.ball.position.x + (this.vel.x * timeToGoal)) * 0.85;
+            // AI Prediction
+            const t = Math.abs((SETTINGS.GOAL_Z - this.ball.position.z) / this.vel.z);
+            this.keeperX = THREE.MathUtils.clamp(this.ball.position.x + (this.vel.x * t), -9, 9);
         };
 
-        window.addEventListener('pointerdown', e => handleStart(e.clientX, e.clientY));
-        window.addEventListener('pointermove', e => handleMove(e.clientX, e.clientY));
-        window.addEventListener('pointerup', handleEnd);
+        window.addEventListener('pointerdown', e => onStart(e.clientX, e.clientY));
+        window.addEventListener('pointermove', e => onMove(e.clientX, e.clientY));
+        window.addEventListener('pointerup', onEnd);
     }
 
-    drawTrajectory() {
+    updateTrajectory() {
         const pts = [];
         let p = this.ball.position.clone();
         let v = this.vel.clone();
-        for(let i=0; i<35; i++) {
+        for(let i=0; i<40; i++) {
             pts.push(p.clone());
             p.add(v);
-            v.y -= 0.04; // Gravity constant
-            if(p.y < this.ballRadius || p.z < this.goalZ) break;
+            v.y += SETTINGS.GRAVITY;
+            if(p.y < 0.55 || p.z < SETTINGS.GOAL_Z) break;
         }
         this.aimer.geometry.setFromPoints(pts);
     }
 
-    reset() {
-        this.state = 'IDLE';
-        this.ball.position.set(0, this.ballRadius, 15);
+    resetGame() {
+        this.state = 'READY';
+        this.ball.position.copy(SETTINGS.BALL_START);
+        this.ball.rotation.set(0,0,0);
         this.vel.set(0,0,0);
-        this.goalie.position.x = 0;
-        this.goalie.rotation.z = 0;
+        this.keeper.position.x = 0;
+        this.keeper.rotation.z = 0;
         document.getElementById('announcer').classList.remove('active');
-        this.camera.position.set(0, 6, 25);
     }
 
-    triggerAnnouncer(msg, color) {
+    announce(txt, color) {
         const el = document.getElementById('announcer');
-        const txt = document.getElementById('msg');
-        txt.innerText = msg;
-        txt.style.color = color;
+        const m = document.getElementById('msg-text');
+        m.innerText = txt;
+        m.style.color = color;
         el.classList.add('active');
-        setTimeout(() => this.reset(), 1800);
+        setTimeout(() => this.resetGame(), 1800);
     }
 
     animate() {
         requestAnimationFrame(() => this.animate());
-        const dt = this.clock.getDelta() * 60; // Normalize to 60fps
+        const dt = this.clock.getDelta() * 60; // Normalize 60fps
 
         if(this.state === 'FLIGHT') {
-            // Ball Physics with Delta Time
-            this.ball.position.x += this.vel.x * dt;
-            this.ball.position.y += this.vel.y * dt;
-            this.ball.position.z += this.vel.z * dt;
-            this.vel.y -= 0.04 * dt; // Gravity
+            // ADVANCED PHYSICS (Magnus + Drag)
+            this.ball.position.add(this.vel.clone().multiplyScalar(dt));
+            this.vel.y += SETTINGS.GRAVITY * dt;
+            this.vel.multiplyScalar(SETTINGS.AIR_DRAG);
+            
+            // Side Curve (Magnus Effect)
+            this.vel.x += this.spin * this.vel.z * -SETTINGS.MAGNUS * dt;
 
-            // Rotation based on movement
-            this.ball.rotation.x += this.vel.z * 0.5 * dt;
-            this.ball.rotation.z -= this.vel.x * 0.5 * dt;
+            // Visual Ball Spin
+            this.ball.rotation.x += this.vel.z * 0.4 * dt;
+            this.ball.rotation.z -= this.vel.x * 0.4 * dt;
 
-            // Goalie AI: "Interpolated Dive"
-            this.goalie.position.x = THREE.MathUtils.lerp(this.goalie.position.x, this.goalieTargetX, 0.1 * dt);
-            if(Math.abs(this.goalieTargetX) > 3) {
-                this.goalie.rotation.z = THREE.MathUtils.lerp(this.goalie.rotation.z, (this.goalieTargetX > 0 ? -1.2 : 1.2), 0.1 * dt);
+            // Goalkeeper AI Diving
+            this.keeper.position.x = THREE.MathUtils.lerp(this.keeper.position.x, this.keeperX, 0.1 * dt);
+            if(Math.abs(this.keeperX) > 2) {
+                this.keeper.rotation.z = THREE.MathUtils.lerp(this.keeper.rotation.z, (this.keeperX > 0 ? -1.1 : 1.1), 0.1 * dt);
             }
 
-            // Floor Bounce
-            if(this.ball.position.y < this.ballRadius) {
-                this.ball.position.y = this.ballRadius;
-                this.vel.y *= -0.4;
+            // Floor Collision
+            if(this.ball.position.y < 0.55) {
+                this.ball.position.y = 0.55;
+                this.vel.y *= -SETTINGS.BOUNCE;
             }
 
-            // Goalie Collision
-            const distToGoalie = this.ball.position.distanceTo(new THREE.Vector3(this.goalie.position.x, 1.8, this.goalie.position.z));
-            if(distToGoalie < 1.8) {
-                this.vel.z *= -0.5; this.vel.x += (Math.random()-0.5) * 0.5;
-                this.state = 'RESET';
-                this.triggerAnnouncer("SAVED!", "#ff4444");
+            // Goal/Save Detection
+            const distToKeeper = this.ball.position.distanceTo(new THREE.Vector3(this.keeper.position.x, 1.8, this.keeper.position.z));
+            if(distToKeeper < 1.8) {
+                this.vel.z *= -0.4; this.state = 'RESOLVED';
+                this.announce("SAVED!", "#ff4444");
             }
 
-            // Post Collision
-            const b = this.ball.position;
-            if(Math.abs(b.z - this.goalZ) < 0.5) {
-                const hitPost = (Math.abs(b.x) > 9.5 && Math.abs(b.x) < 10.5 && b.y < 10);
-                const hitBar = (Math.abs(b.x) < 10 && Math.abs(b.y - 10) < 0.5);
-                if(hitPost || hitBar) { this.vel.z *= -0.6; this.vel.y += 0.2; }
-            }
-
-            // Goal Detection
-            if(this.ball.position.z < this.goalZ) {
+            if(this.ball.position.z < SETTINGS.GOAL_Z) {
                 const isGoal = Math.abs(this.ball.position.x) < 10 && this.ball.position.y < 10 && this.ball.position.y > 0.5;
-                this.state = 'RESET';
+                this.state = 'RESOLVED';
                 if(isGoal) {
                     this.score++;
-                    document.getElementById('score').innerText = this.score;
-                    this.triggerAnnouncer("GOAL!", "#00ffcc");
-                    // Increase Difficulty
-                    if(this.score > 5) document.getElementById('diff').innerText = "WORLD CLASS";
+                    document.getElementById('score-val').innerText = this.score;
+                    this.announce("GOAL!", "#00f2ff");
                 } else {
-                    this.triggerAnnouncer("MISS!", "#ffffff");
+                    this.announce("MISS!", "#ffffff");
                 }
             }
 
-            // Dynamic Camera Follow
-            this.camera.position.lerp(new THREE.Vector3(this.ball.position.x * 0.5, 8, this.ball.position.z + 15), 0.1 * dt);
+            // Spring Camera
+            const camTarget = new THREE.Vector3(this.ball.position.x * 0.4, 6, this.ball.position.z + 15);
+            this.camera.position.lerp(camTarget, 0.1 * dt);
+        } else {
+            this.camera.position.lerp(new THREE.Vector3(0, 5, 25), 0.05 * dt);
         }
 
-        this.camera.lookAt(0, 3, this.goalZ);
+        this.camera.lookAt(0, 3, SETTINGS.GOAL_Z + 10);
         this.renderer.render(this.scene, this.camera);
     }
 }
 
-// Start Engine
-new PenaltyGame();
+new GameEngine();
 </script>
 </body>
 </html>
-
