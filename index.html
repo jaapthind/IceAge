@@ -3,51 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ultimate Monster Penalty Pro 2026</title>
+    <title>ULTRA Penalty Pro</title>
     <style>
-        :root { --accent: #fbbf24; }
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #fff; touch-action: none; }
-        
-        /* UI Overlay */
-        #ui-layer { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
-        
-        /* Top HUD */
-        .hud-top { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-        .score-card { background: rgba(0,0,0,0.6); padding: 15px 25px; border-radius: 12px; border-bottom: 4px solid var(--accent); backdrop-filter: blur(5px); }
-        .score-label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #aaa; }
-        .score-value { font-size: 42px; font-weight: 900; font-style: italic; display: block; }
-        
-        /* Power Meter */
-        #meter-container { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); width: 300px; height: 12px; background: rgba(255,255,255,0.1); border-radius: 20px; border: 2px solid rgba(255,255,255,0.3); display: none; overflow: hidden; }
-        #meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #22c55e, #eab308, #ef4444); box-shadow: 0 0 15px var(--accent); }
-
-        /* Messages */
-        #announcer { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); opacity: 0; font-size: 100px; font-weight: 900; text-transform: uppercase; font-style: italic; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        #announcer.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-
-        canvas { display: block; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; touch-action: none; }
+        #ui { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+        .hud { position: absolute; color: #fff; text-shadow: 3px 3px 0 #000; font-style: italic; }
+        #stats { top: 20px; left: 20px; font-size: 30px; }
+        #power-container { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 200px; height: 15px; border: 3px solid #fff; display: none; background: rgba(0,0,0,0.5); }
+        #power-fill { height: 100%; width: 0%; background: #facc15; }
+        #announcer { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 100px; color: #facc15; display: none; -webkit-text-stroke: 2px black; }
     </style>
 </head>
 <body>
-
-<div id="ui-layer">
-    <div class="hud-top">
-        <div class="score-card">
-            <span class="score-label">Goals Scored</span>
-            <span id="score" class="score-value">0</span>
-        </div>
-        <div class="score-card">
-            <span class="score-label">Streak</span>
-            <span id="streak" class="score-value" style="color:var(--accent)">X0</span>
-        </div>
-    </div>
-
-    <div id="announcer">Goal!</div>
-
-    <div id="meter-container">
-        <div id="meter-fill"></div>
-    </div>
+<div id="ui">
+    <div id="stats" class="hud">GOALS: <span id="score">0</span></div>
+    <div id="announcer" class="hud">GOAL!</div>
+    <div id="power-container"><div id="power-fill"></div></div>
 </div>
+<canvas id="game"></canvas>
 
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -56,377 +29,194 @@
 <script type="module">
 import * as THREE from 'three';
 
-/** * GAME CONSTANTS & MATH 
- */
-const CONFIG = {
-    GRAVITY: -0.018,
-    BALL_RADIUS: 0.5,
-    PITCH_SIZE: 100,
-    GOAL: { width: 14, height: 7, depth: 4, z: -35 },
-    BALL_POS: new THREE.Vector3(0, 0.5, 5),
-    CAM_IDLE: new THREE.Vector3(0, 5, 20),
-    CAM_SHOOT: new THREE.Vector3(0, 3, 15)
+// --- ARCADE CONFIG (Fast & Snappy) ---
+const PHYS = {
+    G: -0.05,        // Stronger Gravity
+    V_MULT: 0.035,   // Higher Velocity
+    BALL_Z: 20,
+    GOAL_Z: -30,
+    RADIUS: 0.6
 };
 
-/**
- * TEXTURE GENERATORS (No External Assets Needed)
- */
-function createBallTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, 512, 512);
-    ctx.fillStyle = '#000';
-    for (let i = 0; i < 20; i++) {
-        ctx.beginPath();
-        ctx.arc(Math.random() * 512, Math.random() * 512, 40, 0, Math.PI * 2);
-        ctx.fill();
+// --- SCENE SETUP ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x022c22);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game'), antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(10, 20, 10);
+sun.castShadow = true;
+scene.add(sun);
+
+// --- ASSETS ---
+// Soccer Ball Pattern (Canvas Texture)
+const ballCanvas = document.createElement('canvas');
+ballCanvas.width = 256; ballCanvas.height = 256;
+const bCtx = ballCanvas.getContext('2d');
+bCtx.fillStyle = '#fff'; bCtx.fillRect(0,0,256,256);
+bCtx.fillStyle = '#000';
+for(let i=0; i<12; i++) { bCtx.beginPath(); bCtx.arc(Math.random()*256, Math.random()*256, 30, 0, 7); bCtx.fill(); }
+const ballTex = new THREE.CanvasTexture(ballCanvas);
+
+const ball = new THREE.Mesh(
+    new THREE.SphereGeometry(PHYS.RADIUS, 32, 32),
+    new THREE.MeshStandardMaterial({ map: ballTex, roughness: 0.3 })
+);
+ball.castShadow = true;
+scene.add(ball);
+
+// Pitch
+const pitch = new THREE.Mesh(
+    new THREE.PlaneGeometry(200, 200),
+    new THREE.MeshStandardMaterial({ color: 0x14532d })
+);
+pitch.rotation.x = -Math.PI/2;
+pitch.receiveShadow = true;
+scene.add(pitch);
+
+// Goal (Accurate collision bounds)
+const goal = new THREE.Group();
+const postMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+const makePost = (w,h,d,x,y,z) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), postMat);
+    m.position.set(x,y,z); m.castShadow = true; goal.add(m);
+};
+makePost(0.4, 8, 0.4, -8, 4, PHYS.GOAL_Z); // Left
+makePost(0.4, 8, 0.4, 8, 4, PHYS.GOAL_Z);  // Right
+makePost(16.4, 0.4, 0.4, 0, 8, PHYS.GOAL_Z); // Top
+scene.add(goal);
+
+// Goalkeeper
+const goalie = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.6, 1.2, 8, 16),
+    new THREE.MeshStandardMaterial({ color: 0xff0000 })
+);
+scene.add(goalie);
+
+// Aimer (The precise one)
+const aimerGeo = new THREE.BufferGeometry();
+const aimerLine = new THREE.Line(aimerGeo, new THREE.LineBasicMaterial({ color: 0xfff000 }));
+scene.add(aimerLine);
+
+// --- LOGIC ---
+let isDragging = false, isShot = false, score = 0;
+let dragStart = new THREE.Vector2(), vel = new THREE.Vector3();
+let goalieTargetX = 0;
+
+const reset = () => {
+    isShot = false;
+    ball.position.set(0, PHYS.RADIUS, PHYS.BALL_Z);
+    vel.set(0,0,0);
+    goalie.position.set(0, 1.5, PHYS.GOAL_Z + 0.5);
+    goalie.rotation.z = 0;
+    document.getElementById('announcer').style.display = 'none';
+};
+
+const getTrajectoryPoints = (startPos, startVel) => {
+    const pts = [];
+    let p = startPos.clone();
+    let v = startVel.clone();
+    for(let i=0; i<40; i++) {
+        pts.push(p.clone());
+        p.add(v);
+        v.y += PHYS.G;
+        if(p.y < PHYS.RADIUS || p.z < PHYS.GOAL_Z) break;
     }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.anisotropy = 16;
-    return tex;
-}
+    return pts;
+};
 
-function createGrassTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 1024;
-    const ctx = canvas.getContext('2d');
-    for(let i=0; i<1024; i+=32) {
-        ctx.fillStyle = (i/32 % 2 === 0) ? '#14532d' : '#166534';
-        ctx.fillRect(0, i, 1024, 32);
-    }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(5, 5);
-    return tex;
-}
+// --- INPUT ---
+window.addEventListener('pointerdown', (e) => {
+    if(isShot) return;
+    isDragging = true;
+    dragStart.set(e.clientX, e.clientY);
+    document.getElementById('power-container').style.display = 'block';
+});
 
-/**
- * CORE ENGINE CLASS
- */
-class Game {
-    constructor() {
-        this.initScene();
-        this.initLights();
-        this.initPitch();
-        this.initGoal();
-        this.initBall();
-        this.initGoalie();
-        this.initTrajectory();
-        this.initEvents();
-        
-        this.state = {
-            score: 0,
-            streak: 0,
-            isDragging: false,
-            isShot: false,
-            power: 0,
-            velocity: new THREE.Vector3(),
-            dragStart: new THREE.Vector2()
-        };
+window.addEventListener('pointermove', (e) => {
+    if(!isDragging) return;
+    const dx = dragStart.x - e.clientX;
+    const dy = dragStart.y - e.clientY;
+    const power = Math.min(Math.sqrt(dx*dx + dy*dy), 250);
+    
+    // Exact velocity mapping
+    vel.set(dx * 0.0015, dy * 0.0025, -power * PHYS.V_MULT);
+    
+    document.getElementById('power-fill').style.width = (power/250)*100 + '%';
+    aimerLine.geometry.setFromPoints(getTrajectoryPoints(ball.position, vel));
+});
 
-        this.animate();
-    }
+window.addEventListener('pointerup', () => {
+    if(!isDragging) return;
+    isDragging = false;
+    isShot = true;
+    document.getElementById('power-container').style.display = 'none';
+    aimerLine.geometry.setFromPoints([]);
+    
+    // AI predicts the X landing
+    const time = (PHYS.GOAL_Z - ball.position.z) / vel.z;
+    goalieTargetX = THREE.MathUtils.clamp(ball.position.x + (vel.x * time), -7, 7);
+});
 
-    initScene() {
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x020617);
-        this.scene.fog = new THREE.FogExp2(0x020617, 0.015);
+// --- MAIN LOOP ---
+function update() {
+    requestAnimationFrame(update);
 
-        this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.copy(CONFIG.CAM_IDLE);
+    if(isShot) {
+        ball.position.add(vel);
+        vel.y += PHYS.G;
+        ball.rotation.x += vel.z * 0.5;
 
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.body.appendChild(this.renderer.domElement);
-    }
-
-    initLights() {
-        const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-        this.scene.add(ambient);
-
-        const spot = new THREE.SpotLight(0xffffff, 2000, 150, 0.5, 0.5);
-        spot.position.set(0, 40, 20);
-        spot.castShadow = true;
-        spot.shadow.mapSize.width = 2048;
-        spot.shadow.mapSize.height = 2048;
-        this.scene.add(spot);
-
-        // Stadium Lights (Visuals)
-        const createFloodLight = (x, z) => {
-            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 40), new THREE.MeshStandardMaterial({color:0x334155}));
-            pole.position.set(x, 20, z);
-            this.scene.add(pole);
-        };
-        createFloodLight(-40, -40); createFloodLight(40, -40);
-    }
-
-    initPitch() {
-        const pitchGeo = new THREE.PlaneGeometry(CONFIG.PITCH_SIZE, CONFIG.PITCH_SIZE);
-        const pitchMat = new THREE.MeshStandardMaterial({ 
-            map: createGrassTexture(),
-            roughness: 0.8
-        });
-        const pitch = new THREE.Mesh(pitchGeo, pitchMat);
-        pitch.rotation.x = -Math.PI / 2;
-        pitch.receiveShadow = true;
-        this.scene.add(pitch);
-
-        // Line markings
-        const box = new THREE.Mesh(
-            new THREE.PlaneGeometry(30, 15), 
-            new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 0.3, wireframe: true})
-        );
-        box.rotation.x = -Math.PI / 2;
-        box.position.set(0, 0.01, CONFIG.GOAL.z + 7.5);
-        this.scene.add(box);
-    }
-
-    initGoal() {
-        this.goal = new THREE.Group();
-        const postMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2 });
-        const postGeo = new THREE.CylinderGeometry(0.3, 0.3, CONFIG.GOAL.height, 16);
-
-        // Posts
-        const leftPost = new THREE.Mesh(postGeo, postMat);
-        leftPost.position.set(-CONFIG.GOAL.width/2, CONFIG.GOAL.height/2, CONFIG.GOAL.z);
-        leftPost.castShadow = true;
-
-        const rightPost = new THREE.Mesh(postGeo, postMat);
-        rightPost.position.set(CONFIG.GOAL.width/2, CONFIG.GOAL.height/2, CONFIG.GOAL.z);
-        rightPost.castShadow = true;
-
-        const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, CONFIG.GOAL.width, 16), postMat);
-        crossbar.rotation.z = Math.PI / 2;
-        crossbar.position.set(0, CONFIG.GOAL.height, CONFIG.GOAL.z);
-        crossbar.castShadow = true;
-
-        // Netting (Physics-less visual)
-        const netGeo = new THREE.BoxGeometry(CONFIG.GOAL.width, CONFIG.GOAL.height, CONFIG.GOAL.depth);
-        const netMat = new THREE.MeshPhongMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.1 });
-        const net = new THREE.Mesh(netGeo, netMat);
-        net.position.set(0, CONFIG.GOAL.height/2, CONFIG.GOAL.z - CONFIG.GOAL.depth/2);
-
-        this.goal.add(leftPost, rightPost, crossbar, net);
-        this.scene.add(this.goal);
-    }
-
-    initBall() {
-        const ballGeo = new THREE.SphereGeometry(CONFIG.BALL_RADIUS, 32, 32);
-        const ballMat = new THREE.MeshStandardMaterial({ 
-            map: createBallTexture(),
-            roughness: 0.4,
-            metalness: 0.1
-        });
-        this.ball = new THREE.Mesh(ballGeo, ballMat);
-        this.ball.castShadow = true;
-        this.ball.position.copy(CONFIG.BALL_POS);
-        this.scene.add(this.ball);
-    }
-
-    initGoalie() {
-        const group = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1.2, 8, 16), new THREE.MeshStandardMaterial({color: 0xef4444}));
-        body.position.y = 1;
-        
-        // Head
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({color: 0xfdcab1}));
-        head.position.y = 2.2;
-        
-        group.add(body, head);
-        group.position.set(0, 0, CONFIG.GOAL.z + 1);
-        this.goalie = group;
-        this.scene.add(this.goalie);
-        this.goalieVel = new THREE.Vector3();
-    }
-
-    initTrajectory() {
-        const geo = new THREE.BufferGeometry();
-        this.trajLine = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.6 }));
-        this.scene.add(this.trajLine);
-    }
-
-    initEvents() {
-        const handleStart = (x, y) => {
-            if (this.state.isShot) return;
-            this.state.isDragging = true;
-            this.state.dragStart.set(x, y);
-            document.getElementById('meter-container').style.display = 'block';
-        };
-
-        const handleMove = (x, y) => {
-            if (!this.state.isDragging) return;
-            const dx = this.state.dragStart.x - x;
-            const dy = this.state.dragStart.y - y;
-            
-            this.state.power = Math.min(Math.sqrt(dx*dx + dy*dy) * 0.5, 100);
-            document.getElementById('meter-fill').style.width = this.state.power + '%';
-
-            // Calculate trajectory
-            this.state.velocity.set(dx * 0.008, dy * 0.012, -this.state.power * 0.018);
-            this.updateTrajectoryVisual();
-        };
-
-        const handleEnd = () => {
-            if (!this.state.isDragging) return;
-            this.state.isDragging = false;
-            this.state.isShot = true;
-            document.getElementById('meter-container').style.display = 'none';
-            this.trajLine.geometry.setFromPoints([]);
-            
-            // Goalie AI Decision
-            this.predictGoalieMove();
-        };
-
-        window.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
-        window.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
-        window.addEventListener('mouseup', handleEnd);
-        window.addEventListener('touchstart', e => handleStart(e.touches[0].clientX, e.touches[0].clientY));
-        window.addEventListener('touchmove', e => handleMove(e.touches[0].clientX, e.touches[0].clientY));
-        window.addEventListener('touchend', handleEnd);
-        window.addEventListener('resize', () => {
-            this.camera.aspect = window.innerWidth / window.innerHeight;
-            this.camera.updateProjectionMatrix();
-            this.renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    }
-
-    updateTrajectoryVisual() {
-        const points = [];
-        let p = this.ball.position.clone();
-        let v = this.state.velocity.clone();
-        for (let i = 0; i < 40; i++) {
-            points.push(p.clone());
-            p.add(v);
-            v.y += CONFIG.GRAVITY;
-            if (p.y < CONFIG.BALL_RADIUS) break;
-            if (p.z < CONFIG.GOAL.z) break;
-        }
-        this.trajLine.geometry.setFromPoints(points);
-    }
-
-    predictGoalieMove() {
-        // Goalie estimates where the ball will be at GOAL_Z
-        const timeToGoal = (CONFIG.GOAL.z - this.ball.position.z) / this.state.velocity.z;
-        const targetX = this.ball.position.x + (this.state.velocity.x * timeToGoal);
-        const targetY = this.ball.position.y + (this.state.velocity.y * timeToGoal) + (0.5 * CONFIG.GRAVITY * timeToGoal * timeToGoal);
-        
-        this.goalieTarget = new THREE.Vector3(
-            THREE.MathUtils.clamp(targetX, -CONFIG.GOAL.width/2 - 1, CONFIG.GOAL.width/2 + 1),
-            THREE.MathUtils.clamp(targetY, 1, CONFIG.GOAL.height),
-            CONFIG.GOAL.z + 0.5
-        );
-    }
-
-    reset() {
-        this.state.isShot = false;
-        this.state.velocity.set(0, 0, 0);
-        this.ball.position.copy(CONFIG.BALL_POS);
-        this.ball.rotation.set(0, 0, 0);
-        this.goalie.position.set(0, 0, CONFIG.GOAL.z + 1);
-        this.goalie.rotation.set(0, 0, 0);
-        this.goalieTarget = null;
-        document.getElementById('announcer').classList.remove('show');
-    }
-
-    showMsg(txt) {
-        const el = document.getElementById('announcer');
-        el.innerText = txt;
-        el.classList.add('show');
-        setTimeout(() => this.reset(), 2000);
-    }
-
-    updatePhysics() {
-        if (!this.state.isShot) {
-            // Idle camera movement
-            this.camera.position.lerp(CONFIG.CAM_IDLE, 0.05);
-            this.camera.lookAt(0, 2, 0);
-            return;
+        // Fast Floor Bounce
+        if(ball.position.y < PHYS.RADIUS) {
+            ball.position.y = PHYS.RADIUS;
+            vel.y *= -0.3;
         }
 
-        // Ball Physics
-        this.ball.position.add(this.state.velocity);
-        this.state.velocity.y += CONFIG.GRAVITY;
-        this.ball.rotation.x += this.state.velocity.z * 0.5;
-        this.ball.rotation.z -= this.state.velocity.x * 0.5;
-
-        // Ground Bounce
-        if (this.ball.position.y < CONFIG.BALL_RADIUS) {
-            this.ball.position.y = CONFIG.BALL_RADIUS;
-            this.state.velocity.y *= -0.4;
-            this.state.velocity.multiplyScalar(0.9); // Friction
+        // Pro Goalie Dive
+        goalie.position.x = THREE.MathUtils.lerp(goalie.position.x, goalieTargetX, 0.15);
+        if(Math.abs(goalieTargetX) > 1.5) {
+            goalie.rotation.z = THREE.MathUtils.lerp(goalie.rotation.z, goalieTargetX > 0 ? -1.2 : 1.2, 0.2);
         }
 
-        // Camera Follow
-        const targetCam = new THREE.Vector3(this.ball.position.x * 0.4, 4, this.ball.position.z + 10);
-        this.camera.position.lerp(targetCam, 0.1);
-        this.camera.lookAt(this.ball.position);
-
-        // Goalie AI Movement
-        if (this.goalieTarget) {
-            this.goalie.position.lerp(this.goalieTarget, 0.08);
-            if (Math.abs(this.goalieTarget.x) > 2) {
-                this.goalie.rotation.z = THREE.MathUtils.lerp(this.goalie.rotation.z, this.goalieTarget.x > 0 ? -Math.PI/3 : Math.PI/3, 0.1);
-            }
+        // Collision Check
+        const dist = ball.position.distanceTo(goalie.position);
+        if(dist < 1.5) {
+            vel.z *= -0.5; vel.x += (Math.random()-0.5);
         }
 
-        // Collision: Goalie
-        const distToGoalie = this.ball.position.distanceTo(this.goalie.position.clone().add(new THREE.Vector3(0,1,0)));
-        if (distToGoalie < 1.8) {
-            this.state.velocity.z *= -0.4;
-            this.state.velocity.x += (Math.random() - 0.5) * 0.5;
-            this.goalieTarget = null;
-            if (document.getElementById('announcer').className === "") this.showMsg("SAVED!");
-        }
-
-        // Collision: Goal Posts (Simple box check)
-        const b = this.ball.position;
-        const isHitPost = (Math.abs(b.x) > CONFIG.GOAL.width/2 - 0.5 && Math.abs(b.x) < CONFIG.GOAL.width/2 + 0.5 && b.y < CONFIG.GOAL.height && Math.abs(b.z - CONFIG.GOAL.z) < 0.5);
-        const isHitBar = (Math.abs(b.x) < CONFIG.GOAL.width/2 && Math.abs(b.y - CONFIG.GOAL.height) < 0.5 && Math.abs(b.z - CONFIG.GOAL.z) < 0.5);
-        
-        if (isHitPost || isHitBar) {
-            this.state.velocity.z *= -0.5;
-            this.state.velocity.y += 0.1;
-        }
-
-        // Goal Logic
-        if (b.z < CONFIG.GOAL.z && b.z > CONFIG.GOAL.z - 2 && !document.getElementById('announcer').classList.contains('show')) {
-            const inX = Math.abs(b.x) < CONFIG.GOAL.width / 2;
-            const inY = b.y < CONFIG.GOAL.height && b.y > 0;
-
-            if (inX && inY) {
-                this.state.score++;
-                this.state.streak++;
-                document.getElementById('score').innerText = this.state.score;
-                document.getElementById('streak').innerText = 'X' + this.state.streak;
-                this.showMsg("GOAL!");
+        // Goal Detection
+        if(ball.position.z < PHYS.GOAL_Z && document.getElementById('announcer').style.display === 'none') {
+            const hit = Math.abs(ball.position.x) < 8 && ball.position.y < 8 && ball.position.y > 0;
+            const announce = document.getElementById('announcer');
+            announce.style.display = 'block';
+            if(hit) {
+                score++;
+                document.getElementById('score').innerText = score;
+                announce.innerText = "GOAL!";
+                announce.style.color = "#facc15";
             } else {
-                this.state.streak = 0;
-                document.getElementById('streak').innerText = 'X0';
-                this.showMsg("MISS!");
+                announce.innerText = "MISS!";
+                announce.style.color = "#ff4444";
             }
+            setTimeout(reset, 1500);
         }
 
-        // Reset if out of play
-        if (b.z < CONFIG.GOAL.z - 10 || Math.abs(b.x) > 30) {
-            if (!document.getElementById('announcer').classList.contains('show')) this.reset();
-        }
+        camera.position.lerp(new THREE.Vector3(ball.position.x*0.5, 6, ball.position.z+12), 0.1);
+    } else {
+        camera.position.lerp(new THREE.Vector3(0, 6, 32), 0.1);
     }
-
-    animate() {
-        requestAnimationFrame(() => this.animate());
-        this.updatePhysics();
-        this.renderer.render(this.scene, this.camera);
-    }
+    camera.lookAt(0, 2, PHYS.GOAL_Z);
+    renderer.render(scene, camera);
 }
 
-// Start Game
-new Game();
-
+reset();
+update();
 </script>
 </body>
 </html>
