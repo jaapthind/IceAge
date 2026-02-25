@@ -3,194 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liquid Glass OS // Physics Engine</title>
+    <title>Viscous Liquid Glass OS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
         :root {
-            --glass: rgba(255, 255, 255, 0.1);
+            --glass: rgba(255, 255, 255, 0.05);
             --border: rgba(255, 255, 255, 0.2);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { 
-            background: #000; 
-            height: 100vh; 
-            overflow: hidden; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            perspective: 1000px;
-        }
-
-        /* --- THE SMOOTH RENDERER --- */
-        #physics-canvas {
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Inter', sans-serif; }
+        
+        /* --- THE SHADER STAGE --- */
+        #canvas-holder {
             position: fixed;
             inset: 0;
             z-index: -1;
-            /* Optimized filter: No blur in the CSS to prevent lag */
-            filter: url(#molten-glass-filter);
-            background: linear-gradient(to bottom, #050505, #111);
+            /* This filter creates the "Liquid Merge" effect */
+            filter: blur(30px) contrast(25) brightness(1.2);
+            background: #000;
         }
 
-        #interface {
-            display: flex;
-            gap: 30px;
+        /* --- RAINBOW REFRACTION OVERLAY --- */
+        #glass-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+            /* Adds the chromatic rainbow edges */
+            filter: url(#rainbow-chroma);
+        }
+
+        #ui-layer {
+            position: relative;
             z-index: 10;
-            pointer-events: none; /* Allows window "shaking" without clicking UI */
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            padding: 20px;
         }
 
         .panel {
-            pointer-events: auto;
             background: var(--glass);
-            border: 1px solid var(--border);
             backdrop-filter: blur(40px) saturate(150%);
-            -webkit-backdrop-filter: blur(40px) saturate(150%);
-            border-radius: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--border);
+            border-radius: 35px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            color: white;
         }
 
-        #controls { width: 300px; padding: 25px; color: white; }
-        #chat { width: 400px; height: 550px; overflow: hidden; }
-        iframe { width: 100%; height: 100%; border: none; opacity: 0.9; }
+        #chat-window { width: 380px; height: 500px; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; opacity: 0.8; }
 
-        h2 { font-size: 10px; letter-spacing: 3px; margin-bottom: 20px; opacity: 0.6; }
-        .stat { font-family: monospace; font-size: 10px; color: #0f0; margin-top: 10px; }
-
-        #boot {
+        #boot-screen {
             position: fixed; inset: 0; background: #000; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 0.8s;
         }
-        .btn {
-            padding: 15px 40px; background: #fff; color: #000; border-radius: 50px;
-            font-weight: 900; border: none; cursor: pointer;
+        button {
+            padding: 15px 40px; background: #fff; border-radius: 50px;
+            font-weight: 900; border: none; cursor: pointer; font-size: 14px;
         }
     </style>
 </head>
 <body>
 
-    <div id="boot">
-        <h1 style="color:white; margin-bottom: 20px; letter-spacing: 5px;">KINETIC_GLASS_V8</h1>
-        <button class="btn" onclick="init()">GRANT PERMISSIONS & START</button>
+    <div id="boot-screen">
+        <h2 style="color:white; letter-spacing:5px; margin-bottom:20px;">VISCOUS_LINK_V10</h2>
+        <button onclick="startApp()">START ENGINE</button>
     </div>
 
-    <svg style="position: absolute; width: 0; height: 0;">
-        <filter id="molten-glass-filter">
-            <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" result="noise" />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="80" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
+    <svg style="position: absolute; width:0; height:0;">
+      <filter id="rainbow-chroma">
+        <feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red"/>
+        <feColorMatrix type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="green" in="SourceGraphic"/>
+        <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="blue" in="SourceGraphic"/>
+        <feOffset in="red" dx="3" dy="0" result="redShifted"/>
+        <feOffset in="blue" dx="-3" dy="0" result="blueShifted"/>
+        <feBlend in="redShifted" in2="green" mode="screen" result="temp"/>
+        <feBlend in="temp" in2="blueShifted" mode="screen"/>
+      </filter>
     </svg>
 
-    <canvas id="physics-canvas"></canvas>
-    <video id="webcam" style="display:none" autoplay playsinline></video>
+    <div id="canvas-holder"></div>
+    <div id="glass-overlay"></div>
 
-    <div id="interface">
-        <div class="panel" id="controls">
-            <h2>PHYSICS_ENGINE_SENSORS</h2>
-            <p style="font-size: 11px; opacity: 0.8;">The liquid now reacts to window movement and gravity.</p>
-            <div class="stat" id="momentum-ui">MOMENTUM: 0.0</div>
-            <div class="stat" id="gravity-ui">GRAVITY: ACTIVE</div>
-            <div style="margin-top: 20px;">
-                <label style="font-size: 10px;">VISCOSITY</label>
-                <input type="range" style="width:100%" id="visc" min="0.8" max="0.99" step="0.01" value="0.95">
+    <div id="ui-layer">
+        <div class="panel" style="padding: 25px; width: 280px;">
+            <h3 style="font-size: 10px; letter-spacing: 3px; opacity: 0.5;">FLUID_SENSORS</h3>
+            <p style="font-size: 12px; margin-top: 15px;">Viscosity: <b>HEAVY</b></p>
+            <p style="font-size: 12px;">Refraction: <b>ULTRA</b></p>
+            <div style="margin-top: 20px; font-size: 10px; color: #aaa;">
+                STABLE_MOLTEN_FLOW: ACTIVE
             </div>
         </div>
 
-        <div class="panel" id="chat">
+        <div class="panel" id="chat-window">
             <iframe src="https://deadsimplechat.com/J4fFLy4Ek"></iframe>
         </div>
     </div>
 
 <script>
-    const canvas = document.getElementById('physics-canvas');
-    const ctx = canvas.getContext('2d');
-    const video = document.getElementById('webcam');
-    
-    let blobs = [];
-    let lastWinX = window.screenX;
-    let lastWinY = window.screenY;
-    let winVelocityX = 0;
-    let winVelocityY = 0;
+    let particles = [];
+    let video;
+    let isStarted = false;
 
-    async function init() {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        video.srcObject = stream;
-        document.getElementById('boot').remove();
+    function setup() {
+        let cnv = createCanvas(windowWidth, windowHeight);
+        cnv.parent('canvas-holder');
         
-        resize();
-        // Create 12 Liquid Blobs
-        for(let i=0; i<12; i++) {
-            blobs.push({
-                x: Math.random() * canvas.width,
-                y: canvas.height - 100,
-                vx: (Math.random() - 0.5) * 10,
-                vy: (Math.random() - 0.5) * 10,
-                radius: 150 + Math.random() * 150,
-                hue: Math.random() * 360
-            });
+        // Setup Webcam for the "Glass Texture"
+        video = createCapture(VIDEO);
+        video.size(640, 480);
+        video.hide();
+
+        // Create heavy, slow-moving blobs
+        for (let i = 0; i < 8; i++) {
+            particles.push(new MoltenBlob());
         }
-        loop();
     }
 
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    function startApp() {
+        document.getElementById('boot-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('boot-screen').remove();
+            isStarted = true;
+        }, 800);
     }
-    window.onresize = resize;
 
-    function loop() {
-        ctx.fillStyle = 'rgba(0,0,0,0.1)'; // Slight trail
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function draw() {
+        if (!isStarted) return;
+        clear();
 
-        // 1. WINDOW SHAKE MOMENTUM
-        winVelocityX = (window.screenX - lastWinX) * 0.5;
-        winVelocityY = (window.screenY - lastWinY) * 0.5;
-        lastWinX = window.screenX;
-        lastWinY = window.screenY;
+        // Track window shake for momentum
+        let windowShake = abs(window.screenX - pmouseX); 
 
-        const friction = parseFloat(document.getElementById('visc').value);
-        const gravity = 0.5;
+        for (let p of particles) {
+            p.update();
+            p.display();
+        }
+    }
 
-        document.getElementById('momentum-ui').innerText = `MOMENTUM: ${Math.abs(winVelocityX + winVelocityY).toFixed(2)}`;
+    class MoltenBlob {
+        constructor() {
+            this.pos = createVector(random(width), height + 200);
+            this.vel = createVector(random(-2, 2), random(-1, -3));
+            this.radius = random(180, 300);
+            this.hueOffset = random(360);
+        }
 
-        blobs.forEach(b => {
-            // Apply Momentum from window shaking
-            b.vx -= winVelocityX;
-            b.vy -= winVelocityY;
-
-            // Physics
-            b.vy += gravity; // Constant gravity pulling down
-            b.x += b.vx;
-            b.y += b.vy;
-            b.vx *= friction;
-            b.vy *= friction;
-
-            // Bounce off bottom and sides
-            if (b.y + b.radius/2 > canvas.height) {
-                b.y = canvas.height - b.radius/2;
-                b.vy *= -0.6; // Bounce elasticity
-            }
-            if (b.x - b.radius/2 < 0 || b.x + b.radius/2 > canvas.width) {
-                b.vx *= -0.8;
-            }
-
-            // Draw Webcam Blobs
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-            ctx.clip();
+        update() {
+            // Viscous Physics: slow, curved movement
+            let noiseVal = noise(this.pos.x * 0.005, this.pos.y * 0.005, frameCount * 0.01);
+            let angle = map(noiseVal, 0, 1, 0, TWO_PI * 2);
             
-            // The Molten Rainbow look
-            b.hue = (b.hue + 1) % 360;
-            ctx.filter = `hue-rotate(${b.hue}deg) brightness(1.2) saturate(1.8)`;
+            let steer = createVector(cos(angle), sin(angle));
+            this.vel.add(steer.mult(0.1));
+            this.vel.limit(2.5); // Keep it slow and thick
             
-            // Mirror image draw
-            ctx.translate(b.x + b.radius, b.y - b.radius);
-            ctx.scale(-1, 1);
-            ctx.drawImage(video, 0, 0, b.radius*2, b.radius*2);
-            ctx.restore();
-        });
+            this.pos.add(this.vel);
 
-        requestAnimationFrame(loop);
+            // Gravity/Bottom pooling
+            if (this.pos.y > height - 100) {
+                this.vel.y -= 0.2;
+            }
+
+            // Screen wrap
+            if (this.pos.x < -this.radius) this.pos.x = width + this.radius;
+            if (this.pos.x > width + this.radius) this.pos.x = -this.radius;
+            if (this.pos.y < -this.radius) this.pos.y = height + this.radius;
+        }
+
+        display() {
+            push();
+            translate(this.pos.x, this.pos.y);
+            
+            // Draw the webcam feed "inside" the blob for that realistic refraction
+            noStroke();
+            drawingContext.clip(); // Only show webcam inside the curved shape
+            
+            // Apply rainbow hue rotation
+            let h = (frameCount + this.hueOffset) % 360;
+            tint(255, 200); // Slight transparency
+            
+            // Draw distorted webcam feed
+            image(video, -this.radius, -this.radius, this.radius * 2, this.radius * 2);
+            
+            pop();
+            
+            // Simple white specular highlight to make it look like glass
+            fill(255, 30);
+            ellipse(this.pos.x - this.radius/3, this.pos.y - this.radius/3, this.radius/2);
+        }
+    }
+
+    function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
     }
 </script>
+
 </body>
 </html>
