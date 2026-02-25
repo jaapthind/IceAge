@@ -3,199 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liquid Glass V7 // Molten Engine</title>
+    <title>Liquid Glass OS // Physics Engine</title>
     <style>
         :root {
-            --glass-clear: rgba(255, 255, 255, 0.12);
-            --glass-border: rgba(255, 255, 255, 0.3);
-            --accent: #ffffff;
+            --glass: rgba(255, 255, 255, 0.1);
+            --border: rgba(255, 255, 255, 0.2);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
-        body { background: #000; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { 
+            background: #000; 
+            height: 100vh; 
+            overflow: hidden; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            perspective: 1000px;
+        }
 
-        /* --- THE MOLTEN ENGINE --- */
-        #molten-canvas {
+        /* --- THE SMOOTH RENDERER --- */
+        #physics-canvas {
             position: fixed;
             inset: 0;
             z-index: -1;
-            filter: url(#molten-glass-filter) contrast(1.2) saturate(1.4);
-            background: radial-gradient(circle at center, #111, #000);
+            /* Optimized filter: No blur in the CSS to prevent lag */
+            filter: url(#molten-glass-filter);
+            background: linear-gradient(to bottom, #050505, #111);
         }
 
-        /* --- UI WRAPPER --- */
         #interface {
             display: flex;
-            gap: 40px;
-            align-items: flex-start;
+            gap: 30px;
             z-index: 10;
+            pointer-events: none; /* Allows window "shaking" without clicking UI */
         }
 
-        /* --- SETTINGS: ACTUAL LIQUID GLASS STYLE --- */
-        .glass-panel {
-            width: 320px;
-            padding: 30px;
-            border-radius: 24px;
-            background: var(--glass-clear);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-            color: white;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        .panel {
+            pointer-events: auto;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(40px) saturate(150%);
+            -webkit-backdrop-filter: blur(40px) saturate(150%);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
 
-        /* --- NORMAL SIZED CHAT --- */
-        #chat-container {
-            width: 420px; /* Small/Medium Normal Size */
-            height: 600px;
-            border-radius: 24px;
-            overflow: hidden;
-            background: rgba(0, 0, 0, 0.6);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(20px);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        }
+        #controls { width: 300px; padding: 25px; color: white; }
+        #chat { width: 400px; height: 550px; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; opacity: 0.9; }
 
-        iframe { width: 100%; height: 100%; border: none; }
+        h2 { font-size: 10px; letter-spacing: 3px; margin-bottom: 20px; opacity: 0.6; }
+        .stat { font-family: monospace; font-size: 10px; color: #0f0; margin-top: 10px; }
 
-        /* Controls */
-        h2 { font-size: 11px; letter-spacing: 3px; margin-bottom: 20px; opacity: 0.7; }
-        .control-row { margin-bottom: 15px; }
-        label { display: block; font-size: 10px; margin-bottom: 5px; font-weight: bold; }
-        input[type="range"] { width: 100%; cursor: pointer; accent-color: #fff; }
-
-        /* Permissions Modal */
-        #overlay {
-            position: fixed; inset: 0; background: #000; z-index: 999;
+        #boot {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .start-btn {
-            padding: 20px 50px; background: white; color: black; border: none;
-            border-radius: 40px; font-weight: 900; cursor: pointer; font-size: 16px;
+        .btn {
+            padding: 15px 40px; background: #fff; color: #000; border-radius: 50px;
+            font-weight: 900; border: none; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <div id="overlay">
-        <h1 style="color:white; letter-spacing:10px; margin-bottom:20px;">SYSTEM BOOT</h1>
-        <button class="start-btn" onclick="bootSystem()">INITIALIZE MOLTEN LINK</button>
+    <div id="boot">
+        <h1 style="color:white; margin-bottom: 20px; letter-spacing: 5px;">KINETIC_GLASS_V8</h1>
+        <button class="btn" onclick="init()">GRANT PERMISSIONS & START</button>
     </div>
 
-    <svg width="0" height="0">
-        <defs>
-            <filter id="molten-glass-filter">
-                <feTurbulence type="fractalNoise" baseFrequency="0.01 0.015" numOctaves="2" seed="5" result="noise">
-                    <animate attributeName="baseFrequency" values="0.01 0.015; 0.015 0.01; 0.01 0.015" dur="20s" repeatCount="indefinite"/>
-                </feTurbulence>
-                <feGaussianBlur in="noise" stdDeviation="5" result="blurredNoise"/>
-                <feDisplacementMap in="SourceGraphic" in2="blurredNoise" scale="120" xChannelSelector="R" yChannelSelector="G"/>
-            </filter>
-        </defs>
+    <svg style="position: absolute; width: 0; height: 0;">
+        <filter id="molten-glass-filter">
+            <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="80" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
     </svg>
 
-    <canvas id="molten-canvas"></canvas>
-    <video id="v" style="display:none" autoplay playsinline></video>
+    <canvas id="physics-canvas"></canvas>
+    <video id="webcam" style="display:none" autoplay playsinline></video>
 
     <div id="interface">
-        <div class="glass-panel">
-            <h2>LIQUID CORE V7</h2>
-            <div class="control-row">
-                <label>REFRACTION INTENSITY</label>
-                <input type="range" id="refract" min="10" max="300" value="150">
-            </div>
-            <div class="control-row">
-                <label>RAINBOW DENSITY</label>
-                <input type="range" id="rainbow" min="0" max="100" value="60">
-            </div>
-            <div class="control-row">
-                <label>FLUID SPEED</label>
-                <input type="range" id="speed" min="1" max="100" value="30">
-            </div>
-            <div class="control-row" style="margin-top:30px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
-                <p id="lat-log" style="font-size:10px; color:#aaa;">GPS: OFFLINE</p>
-                <p id="cpu-load" style="font-size:10px; color:#aaa; margin-top:5px;">CPU_SYNC: READY</p>
+        <div class="panel" id="controls">
+            <h2>PHYSICS_ENGINE_SENSORS</h2>
+            <p style="font-size: 11px; opacity: 0.8;">The liquid now reacts to window movement and gravity.</p>
+            <div class="stat" id="momentum-ui">MOMENTUM: 0.0</div>
+            <div class="stat" id="gravity-ui">GRAVITY: ACTIVE</div>
+            <div style="margin-top: 20px;">
+                <label style="font-size: 10px;">VISCOSITY</label>
+                <input type="range" style="width:100%" id="visc" min="0.8" max="0.99" step="0.01" value="0.95">
             </div>
         </div>
 
-        <div id="chat-container">
+        <div class="panel" id="chat">
             <iframe src="https://deadsimplechat.com/J4fFLy4Ek"></iframe>
         </div>
     </div>
 
 <script>
-    const canvas = document.getElementById('molten-canvas');
+    const canvas = document.getElementById('physics-canvas');
     const ctx = canvas.getContext('2d');
-    const video = document.getElementById('v');
-    let audioData, analyser;
+    const video = document.getElementById('webcam');
+    
+    let blobs = [];
+    let lastWinX = window.screenX;
+    let lastWinY = window.screenY;
+    let winVelocityX = 0;
+    let winVelocityY = 0;
 
-    async function bootSystem() {
-        document.getElementById('overlay').style.display = 'none';
-
-        // 1. Camera & Mic
+    async function init() {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         video.srcObject = stream;
-
-        // 2. Audio Setup
-        const ac = new AudioContext();
-        analyser = ac.createAnalyser();
-        ac.createMediaStreamSource(stream).connect(analyser);
-        audioData = new Uint8Array(analyser.frequencyBinCount);
-
-        // 3. Location
-        navigator.geolocation.getCurrentPosition(p => {
-            document.getElementById('lat-log').innerText = `GPS: ${p.coords.latitude.toFixed(2)}N, ${p.coords.longitude.toFixed(2)}E`;
-        });
-
-        requestAnimationFrame(render);
+        document.getElementById('boot').remove();
+        
+        resize();
+        // Create 12 Liquid Blobs
+        for(let i=0; i<12; i++) {
+            blobs.push({
+                x: Math.random() * canvas.width,
+                y: canvas.height - 100,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                radius: 150 + Math.random() * 150,
+                hue: Math.random() * 360
+            });
+        }
+        loop();
     }
 
-    function render() {
+    function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+    }
+    window.onresize = resize;
 
-        let vol = 0;
-        if(analyser) {
-            analyser.getByteFrequencyData(audioData);
-            vol = audioData.reduce((a,b) => a+b) / audioData.length;
-        }
+    function loop() {
+        ctx.fillStyle = 'rgba(0,0,0,0.1)'; // Slight trail
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Update SVG scale based on mic and slider
-        const baseRefract = document.getElementById('refract').value;
-        document.getElementById('molten-glass-filter').querySelector('feDisplacementMap').setAttribute('scale', Number(baseRefract) + (vol * 1.5));
+        // 1. WINDOW SHAKE MOMENTUM
+        winVelocityX = (window.screenX - lastWinX) * 0.5;
+        winVelocityY = (window.screenY - lastWinY) * 0.5;
+        lastWinX = window.screenX;
+        lastWinY = window.screenY;
 
-        // Draw Molten Rainbow Blobs
-        ctx.clearRect(0,0, canvas.width, canvas.height);
-        
-        const speed = document.getElementById('speed').value / 2000;
-        const rainbowVal = document.getElementById('rainbow').value;
-        const time = Date.now() * speed;
+        const friction = parseFloat(document.getElementById('visc').value);
+        const gravity = 0.5;
 
-        for(let i=0; i<8; i++) {
-            const x = canvas.width/2 + Math.cos(time + i) * (canvas.width * 0.3);
-            const y = canvas.height/2 + Math.sin(time*0.7 + i) * (canvas.height * 0.3);
-            const size = 400 + (vol * 2);
+        document.getElementById('momentum-ui').innerText = `MOMENTUM: ${Math.abs(winVelocityX + winVelocityY).toFixed(2)}`;
 
+        blobs.forEach(b => {
+            // Apply Momentum from window shaking
+            b.vx -= winVelocityX;
+            b.vy -= winVelocityY;
+
+            // Physics
+            b.vy += gravity; // Constant gravity pulling down
+            b.x += b.vx;
+            b.y += b.vy;
+            b.vx *= friction;
+            b.vy *= friction;
+
+            // Bounce off bottom and sides
+            if (b.y + b.radius/2 > canvas.height) {
+                b.y = canvas.height - b.radius/2;
+                b.vy *= -0.6; // Bounce elasticity
+            }
+            if (b.x - b.radius/2 < 0 || b.x + b.radius/2 > canvas.width) {
+                b.vx *= -0.8;
+            }
+
+            // Draw Webcam Blobs
             ctx.save();
             ctx.beginPath();
-            ctx.arc(x, y, size/2, 0, Math.PI*2);
+            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
             ctx.clip();
-
-            // RAINBOW LIQUID LOGIC
-            const hue = (time * 50 + (i * 45)) % 360;
-            ctx.filter = `hue-rotate(${hue}deg) saturate(${rainbowVal}%) brightness(1.1)`;
-            ctx.drawImage(video, x - size/2, y - size/2, size, size);
+            
+            // The Molten Rainbow look
+            b.hue = (b.hue + 1) % 360;
+            ctx.filter = `hue-rotate(${b.hue}deg) brightness(1.2) saturate(1.8)`;
+            
+            // Mirror image draw
+            ctx.translate(b.x + b.radius, b.y - b.radius);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, b.radius*2, b.radius*2);
             ctx.restore();
-        }
+        });
 
-        // Add a "Clear Glass" sheen over everything
-        ctx.fillStyle = 'rgba(255,255,255,0.03)';
-        ctx.fillRect(0,0, canvas.width, canvas.height);
-
-        requestAnimationFrame(render);
+        requestAnimationFrame(loop);
     }
 </script>
-
 </body>
 </html>
