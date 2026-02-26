@@ -3,67 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google</title>
+    <title>macOS Simulator - Google Background</title>
     <link rel="icon" type="image/x-icon" href="https://www.google.com/favicon.ico">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; cursor: url('https://cdn.custom-cursor.com/db/9753/32/apple-spinning-wait-cursor-pointer.png'), wait !important; user-select: none; }
-        body, html { width: 100%; height: 100%; background: #fff; overflow: hidden; position: relative; }
+        /* --- MAC TYPOGRAPHY & CURSOR --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; cursor: url('https://cdn.custom-cursor.com/db/9753/32/apple-spinning-wait-cursor-pointer.png'), wait !important; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; position: relative; background: #fff; }
 
-        /* --- FAKE GOOGLE BACKGROUND --- */
-        #google-desktop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; z-index: 0; cursor: default; }
+        /* --- FAKE GOOGLE DESKTOP WALLPAPER --- */
+        #google-desktop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; z-index: 0; padding-top: 30px; }
         .g-nav { display: flex; justify-content: flex-end; padding: 15px 20px; gap: 15px; font-size: 13px; align-items: center; }
         .g-nav a { text-decoration: none; color: #202124; cursor: pointer !important; }
-        .g-app-icon { width: 24px; height: 24px; fill: #5f6368; cursor: pointer !important; }
-        .g-avatar { width: 32px; height: 32px; border-radius: 50%; background: #1a73e8; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer !important; }
+        .g-avatar { width: 32px; height: 32px; border-radius: 50%; background: #1a73e8; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer !important; }
         .g-main { flex: 1; display: flex; flex-direction: column; align-items: center; padding-top: 8vh; }
         .g-logo { width: 272px; margin-bottom: 28px; }
-        .g-search-box { width: 100%; max-width: 584px; height: 46px; background: #fff; border: 1px solid #dfe1e5; border-radius: 24px; display: flex; align-items: center; padding: 0 14px; margin-bottom: 28px; }
-        .g-search-box:hover { box-shadow: 0 1px 6px rgba(32,33,36,0.28); }
+        .g-search-box { width: 100%; max-width: 584px; height: 46px; background: #fff; border: 1px solid #dfe1e5; border-radius: 24px; display: flex; align-items: center; padding: 0 14px; margin-bottom: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .g-input { flex: 1; height: 100%; border: none; outline: none; font-size: 16px; margin-left: 10px; cursor: text !important;}
         .g-buttons { display: flex; gap: 12px; justify-content: center; }
         .g-btn { background: #f8f9fa; border: 1px solid #f8f9fa; border-radius: 4px; color: #3c4043; font-size: 14px; padding: 0 16px; height: 36px; cursor: pointer !important; }
-        .g-footer { background: #f2f2f2; color: #70757a; font-size: 14px; width: 100%; position: absolute; bottom: 0; }
-        .g-footer-top { padding: 15px 30px; border-bottom: 1px solid #dadce0; }
-        .g-footer-bottom { display: flex; justify-content: space-between; padding: 15px 20px; }
 
-        /* --- MAC OS DOCK --- */
+        /* --- MAC OS MENU BAR --- */
+        #menu-bar {
+            position: absolute; top: 0; left: 0; width: 100%; height: 28px;
+            background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border-bottom: 1px solid rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;
+            padding: 0 16px; font-size: 13px; font-weight: 500; color: #333; z-index: 99999;
+        }
+        .menu-left, .menu-right { display: flex; gap: 16px; align-items: center; }
+        .menu-item { cursor: pointer !important; font-weight: 600; }
+        .menu-item.bold { font-weight: 700; }
+        .apple-logo { font-size: 16px; }
+
+        /* --- MAC OS LIQUID GLASS DOCK --- */
         #dock-trigger-area { position: absolute; bottom: 0; left: 0; width: 100%; height: 20px; z-index: 9999; }
         #dock {
             position: absolute; bottom: 10px; left: 50%; transform: translate(-50%, 150%);
-            background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
-            border: 1px solid rgba(255, 255, 255, 0.4); border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255, 255, 255, 0.6);
-            padding: 8px; border-radius: 24px; display: flex; gap: 6px; z-index: 10000; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(40px) saturate(200%); -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.5); border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+            padding: 8px; border-radius: 22px; display: flex; gap: 8px; z-index: 10000;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         #dock-trigger-area:hover ~ #dock, #dock:hover { transform: translate(-50%, 0); }
         .dock-icon-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; }
         .dock-icon {
-            width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1); cursor: pointer !important; background: #eee;
+            width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25); transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1); cursor: pointer !important; background: #eee;
         }
-        .dock-icon:hover { transform: scale(1.4) translateY(-10px); z-index: 10; }
-        .dock-dot { width: 4px; height: 4px; background: rgba(0,0,0,0.5); border-radius: 50%; margin-top: 4px; opacity: 0; transition: opacity 0.2s; }
+        .dock-icon:hover { transform: scale(1.35) translateY(-12px); z-index: 10; }
+        .dock-dot { width: 4px; height: 4px; background: rgba(0,0,0,0.6); border-radius: 50%; margin-top: 4px; opacity: 0; transition: opacity 0.2s; }
         .dock-dot.active { opacity: 1; }
 
         /* --- WINDOW SYSTEM --- */
         .mac-window {
-            position: absolute; width: 600px; height: 450px; border-radius: 12px; display: none; flex-direction: column; overflow: hidden;
-            box-shadow: 0 30px 80px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1); background: #1c1c1e; transform-origin: bottom center;
+            position: absolute; width: 650px; height: 450px; border-radius: 12px; display: none; flex-direction: column; overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.4) inset; background: rgba(245,245,247,0.95);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transform-origin: bottom center;
             transition: transform 0.4s cubic-bezier(0.2, 1, 0.3, 1), opacity 0.3s ease-out; transform: scale(0.1) translateY(50vh); opacity: 0;
         }
         .mac-window.open { display: flex; transform: scale(1) translateY(0); opacity: 1; }
         
-        /* Special wrapper for Chat to contain WebGL */
-        #window-chat { width: 440px; height: 640px; background: transparent; box-shadow: none; border-radius: 20px;}
-        .chat-inner { position: relative; z-index: 2; width: 420px; height: 620px; margin: 10px; background: #1c1c1e; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1); }
+        /* CHAT WINDOW EXCEPTIONS */
+        #win-chat { width: 440px; height: 640px; background: transparent; box-shadow: none; border-radius: 20px; backdrop-filter: none; }
+        .chat-inner { position: relative; z-index: 2; width: 420px; height: 620px; margin: 10px; background: #1c1c1e; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.1); }
         #glcanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; border-radius: 20px; pointer-events: none;}
 
+        /* TITLE BARS */
         .title-bar {
-            height: 38px; background: #2d2d2d; display: flex; align-items: center; padding: 0 12px; gap: 8px; border-bottom: 1px solid #111; cursor: grab !important; z-index: 10;
+            height: 44px; display: flex; align-items: center; padding: 0 14px; gap: 8px; border-bottom: 1px solid rgba(0,0,0,0.1);
+            cursor: grab !important; z-index: 10; background: linear-gradient(180deg, #fafafa, #f0f0f0);
         }
+        .title-bar.dark-bar { background: #2d2d2d; border-bottom: 1px solid #111; }
         .title-bar:active { cursor: grabbing !important; }
-        .window-title { flex: 1; text-align: center; color: #999; font-size: 13px; font-weight: 600; margin-left: -40px; pointer-events: none; }
+        .window-title { flex: 1; text-align: center; color: #444; font-size: 13px; font-weight: 600; margin-left: -40px; pointer-events: none; }
+        .dark-bar .window-title { color: #aaa; }
         
+        /* MAC TRAFFIC LIGHTS */
         .mac-btn { width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; cursor: pointer !important; }
         .mac-btn::before { content: ''; color: rgba(0,0,0,0.6); font-size: 9px; font-weight: 800; opacity: 0; position: absolute; }
         .title-bar:hover .mac-btn::before { opacity: 1; }
@@ -75,16 +90,51 @@
         iframe { width: 100%; height: 100%; border: none; background: #fff; }
         .iframe-shield { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: none; }
 
-        /* Custom App Styles */
-        .notes-app { width: 100%; height: 100%; padding: 20px; border: none; outline: none; font-size: 16px; resize: none; background: #fdf6e3; color: #333; cursor: text !important;}
-        .terminal-app { background: #000; color: #0f0; padding: 10px; font-family: monospace; height: 100%; overflow: hidden;}
-        .clock-app { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 60px; font-weight: bold; font-variant-numeric: tabular-nums; background: #111; color: white;}
+        /* --- CUSTOM APPS UI --- */
+        /* Calculator */
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #555; height: 100%; }
+        .calc-screen { grid-column: span 4; background: #333; color: white; display: flex; align-items: flex-end; justify-content: flex-end; padding: 20px; font-size: 48px; font-weight: 300; }
+        .calc-btn { background: #e0e0e0; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer !important; }
+        .calc-btn:active { background: #ccc; }
+        .calc-btn.op { background: #f9a825; color: white; font-size: 24px;}
+        .calc-btn.op:active { background: #f57f17; }
+        .calc-btn.zero { grid-column: span 2; }
+
+        /* Notes */
+        .notes-app { width: 100%; height: 100%; padding: 20px; border: none; outline: none; font-size: 16px; font-family: -apple-system; resize: none; background: #fdf6e3; color: #333; cursor: text !important;}
+        
+        /* Draw App */
+        #draw-canvas { width: 100%; height: 100%; cursor: crosshair !important; background: white; }
+        
+        /* Terminal */
+        .terminal-app { background: rgba(30,30,30,0.9); color: #0f0; padding: 15px; font-family: monospace; height: 100%; overflow: hidden; font-size: 14px;}
+        
+        /* Tic Tac Toe */
+        .ttt-board { display: grid; grid-template-columns: repeat(3, 1fr); height: 100%; background: #ccc; gap: 2px;}
+        .ttt-cell { background: #fff; display: flex; align-items: center; justify-content: center; font-size: 72px; font-family: sans-serif; cursor: pointer !important; }
     </style>
 </head>
 <body>
 
+    <div id="menu-bar">
+        <div class="menu-left">
+            <span class="menu-item apple-logo"></span>
+            <span class="menu-item bold" id="active-app-name">Finder</span>
+            <span class="menu-item">File</span>
+            <span class="menu-item">Edit</span>
+            <span class="menu-item">View</span>
+            <span class="menu-item">Window</span>
+            <span class="menu-item">Help</span>
+        </div>
+        <div class="menu-right">
+            <span class="menu-item">🔋 100%</span>
+            <span class="menu-item">📶</span>
+            <span class="menu-item" id="top-clock">Mon 9:41 AM</span>
+        </div>
+    </div>
+
     <div id="google-desktop">
-        <div class="g-nav"><a href="#">Gmail</a><a href="#">Images</a><svg class="g-app-icon" viewBox="0 0 24 24"><path d="M6 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm12 2c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path></svg><div class="g-avatar">A</div></div>
+        <div class="g-nav"><a>Gmail</a><a>Images</a><div class="g-avatar">A</div></div>
         <div class="g-main">
             <img class="g-logo" src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
             <div class="g-search-box">
@@ -93,7 +143,6 @@
             </div>
             <div class="g-buttons"><button class="g-btn">Google Search</button><button class="g-btn">I'm Feeling Lucky</button></div>
         </div>
-        <div class="g-footer"><div class="g-footer-top">United States</div></div>
     </div>
 
     <div id="windows-container"></div>
@@ -102,38 +151,44 @@
     <div id="dock"></div>
 
     <script>
-        // OS DATA: 20 Working Apps
+        // --- LIVE CLOCK ---
+        function updateTopClock() {
+            const now = new Date();
+            const options = { weekday: 'short', hour: 'numeric', minute: '2-digit' };
+            document.getElementById('top-clock').innerText = now.toLocaleDateString('en-US', options).replace(',', '');
+            setTimeout(updateTopClock, 60000);
+        }
+        updateTopClock();
+
+        // --- APPS DATA ---
         const apps = [
-            { id: 'finder', name: 'Finder', icon: '🍏', bg: 'linear-gradient(180deg, #f0f4f8, #d9e2ec)', type: 'iframe', url: 'https://en.wikipedia.org/wiki/Main_Page' }, // Finder acts as browser fallback
-            { id: 'safari', name: 'Safari', icon: '🧭', bg: '#fff', border: '2px solid #007aff', borderRadius: '50%', type: 'iframe', url: 'https://en.wikipedia.org/wiki/Apple_Inc.' },
-            { id: 'chat', name: 'Chat', icon: '💬', bg: 'linear-gradient(135deg, #1e3c72, #2a5298)', type: 'liquid', url: 'https://deadsimplechat.com/J4fFLy4Ek' },
+            { id: 'safari', name: 'Safari', icon: '🧭', bg: '#fff', border: '2px solid #007aff', borderRadius: '50%', type: 'iframe', url: 'https://en.wikipedia.org/wiki/Main_Page' },
+            { id: 'chat', name: 'Liquid Chat', icon: '💬', bg: 'linear-gradient(135deg, #1e3c72, #2a5298)', type: 'liquid', url: 'https://deadsimplechat.com/J4fFLy4Ek' },
             { id: 'maps', name: 'Maps', icon: '🗺️', bg: '#e5e5ea', type: 'iframe', url: 'https://www.openstreetmap.org/export/embed.html?bbox=-122.5%2C37.7%2C-122.3%2C37.8&layer=mapnik' },
-            { id: 'spotify', name: 'Music', icon: '🎵', bg: '#1db954', type: 'iframe', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M' },
-            { id: 'youtube', name: 'YouTube', icon: '▶️', bg: '#ff0000', type: 'iframe', url: 'https://www.youtube.com/embed/jfKfPfyJRdk' },
-            { id: 'notes', name: 'Notes', icon: '📝', bg: '#fbf0d9', type: 'custom', html: '<textarea class="notes-app" placeholder="Start typing..."></textarea>' },
-            { id: 'terminal', name: 'Terminal', icon: '💻', bg: '#222', type: 'custom', html: '<div class="terminal-app">> root@macos ~ % <span contenteditable="true" style="outline:none"></span></div>' },
-            { id: 'clock', name: 'Clock', icon: '🕒', bg: '#000', type: 'custom', html: '<div class="clock-app" id="live-clock"></div>' },
-            { id: 'calc', name: 'Calculator', icon: '🧮', bg: '#ff9500', type: 'iframe', url: 'https://www.desmos.com/scientific' },
-            { id: 'weather', name: 'Weather', icon: '☀️', bg: '#4ab2f1', type: 'iframe', url: 'https://wttr.in/SanFrancisco?format=v2' },
-            { id: 'stocks', name: 'Stocks', icon: '📈', bg: '#111', type: 'iframe', url: 'https://s.tradingview.com/widgetembed/?symbol=AAPL' },
-            { id: 'photos', name: 'Photos', icon: '🖼️', bg: '#fff', type: 'iframe', url: 'https://source.unsplash.com/random/600x400' },
-            { id: 'mail', name: 'Mail', icon: '✉️', bg: '#42a5f5', type: 'custom', html: '<div style="padding:20px; font-family:sans-serif"><h3>Inbox</h3><hr/><p><b>Apple:</b> Welcome to macOS</p><p><b>Google:</b> Security Alert</p></div>' },
-            { id: 'calendar', name: 'Calendar', icon: '📅', bg: '#fff', type: 'custom', html: '<div style="padding:40px; text-align:center; font-size:40px; color:red"><b>25</b></div>' },
-            { id: 'reminders', name: 'Reminders', icon: '✅', bg: '#fff', type: 'custom', html: '<ul style="padding:20px 40px; font-size:18px; line-height:2"><li>Buy milk</li><li>Code OS</li><li>Feed dog</li></ul>' },
-            { id: 'settings', name: 'Settings', icon: '⚙️', bg: '#8e8e93', type: 'custom', html: '<div style="padding:20px;"><b>System Preferences</b><br/><br/>Display<br/>Network<br/>Sound</div>' },
-            { id: 'contacts', name: 'Contacts', icon: '📙', bg: '#af52de', type: 'custom', html: '<div style="padding:20px;"><b>All Contacts</b><hr/>Steve Jobs<br/>Tim Cook<br/>Craig Federighi</div>' },
-            { id: 'store', name: 'App Store', icon: '🛍️', bg: '#34c759', type: 'iframe', url: 'https://play.google.com/store/apps' }, // Some framing allowed
-            { id: 'trash', name: 'Trash', icon: '🗑️', bg: '#cfd8dc', type: 'custom', html: '<div style="display:flex; height:100%; align-items:center; justify-content:center; color:#888;">Empty</div>' }
+            { id: 'music', name: 'Music', icon: '🎵', bg: '#1db954', type: 'iframe', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M' },
+            { id: 'notes', name: 'Notes', icon: '📝', bg: '#fbf0d9', type: 'custom', html: '<textarea class="notes-app" id="note-text" placeholder="Start typing..."></textarea>' },
+            { id: 'calc', name: 'Calculator', icon: '🧮', bg: '#ff9500', type: 'custom', 
+                html: `<div class="calc-grid">
+                        <div class="calc-screen" id="calc-screen">0</div>
+                        <div class="calc-btn">AC</div><div class="calc-btn">+/-</div><div class="calc-btn">%</div><div class="calc-btn op">÷</div>
+                        <div class="calc-btn num">7</div><div class="calc-btn num">8</div><div class="calc-btn num">9</div><div class="calc-btn op">×</div>
+                        <div class="calc-btn num">4</div><div class="calc-btn num">5</div><div class="calc-btn num">6</div><div class="calc-btn op">-</div>
+                        <div class="calc-btn num">1</div><div class="calc-btn num">2</div><div class="calc-btn num">3</div><div class="calc-btn op">+</div>
+                        <div class="calc-btn num zero">0</div><div class="calc-btn num">.</div><div class="calc-btn op">=</div>
+                       </div>` },
+            { id: 'draw', name: 'Paint', icon: '🖌️', bg: '#fff', type: 'custom', html: '<canvas id="draw-canvas"></canvas>' },
+            { id: 'tictactoe', name: 'Game', icon: '❌', bg: '#111', type: 'custom', html: '<div class="ttt-board" id="ttt-board"></div>' },
+            { id: 'terminal', name: 'Terminal', icon: '💻', bg: '#222', type: 'custom', html: '<div class="terminal-app" onclick="document.getElementById(\'term-input\').focus()">Last login: Today on ttys000<br/>macbook-pro:~ user$ <span id="term-out"></span><input type="text" id="term-input" style="background:transparent;border:none;color:#0f0;outline:none;font-family:monospace;width:70%;" autocomplete="off" autofocus></div>' },
+            { id: 'weather', name: 'Weather', icon: '☀️', bg: '#4ab2f1', type: 'iframe', url: 'https://wttr.in/SanFrancisco?format=v2' }
         ];
 
         let zIndexCounter = 100;
-
-        // Render Dock
         const dockEl = document.getElementById('dock');
         const windowsContainer = document.getElementById('windows-container');
 
+        // --- RENDER DOCK & WINDOWS ---
         apps.forEach(app => {
-            // Create Dock Icon
+            // Build Dock Icon
             const wrapper = document.createElement('div');
             wrapper.className = 'dock-icon-wrapper';
             wrapper.onclick = () => openApp(app.id);
@@ -153,20 +208,21 @@
             wrapper.appendChild(dot);
             dockEl.appendChild(wrapper);
 
-            // Create Window
+            // Build Window
             const win = document.createElement('div');
             win.className = 'mac-window';
             win.id = `win-${app.id}`;
             win.style.left = `${Math.random() * 200 + 100}px`;
             win.style.top = `${Math.random() * 100 + 50}px`;
             
+            let barStyle = app.id === 'chat' || app.id === 'terminal' ? 'dark-bar' : '';
             let contentHTML = '';
+
             if (app.type === 'liquid') {
-                win.id = 'window-chat';
                 contentHTML = `
                     <canvas id="glcanvas"></canvas>
                     <div class="chat-inner">
-                        <div class="title-bar" onmousedown="startDrag(event, '${win.id}')">
+                        <div class="title-bar dark-bar" onmousedown="startDrag(event, '${win.id}', '${app.name}')">
                             <div class="mac-btn mac-close" onclick="closeApp('${app.id}')"></div>
                             <div class="mac-btn mac-min" onclick="closeApp('${app.id}')"></div>
                             <div class="mac-btn mac-max"></div>
@@ -180,7 +236,7 @@
             } else {
                 let inner = app.type === 'iframe' ? `<iframe src="${app.url}"></iframe>` : app.html;
                 contentHTML = `
-                    <div class="title-bar" onmousedown="startDrag(event, '${win.id}')">
+                    <div class="title-bar ${barStyle}" onmousedown="startDrag(event, '${win.id}', '${app.name}')">
                         <div class="mac-btn mac-close" onclick="closeApp('${app.id}')"></div>
                         <div class="mac-btn mac-min" onclick="closeApp('${app.id}')"></div>
                         <div class="mac-btn mac-max"></div>
@@ -193,26 +249,32 @@
             }
             
             win.innerHTML = contentHTML;
-            win.onmousedown = () => bringToFront(win.id);
+            win.onmousedown = () => { bringToFront(win.id); updateMenuBar(app.name); };
             windowsContainer.appendChild(win);
         });
 
-        // App Logic
+        // --- WINDOW MANAGEMENT ---
         function openApp(id) {
-            const win = document.getElementById(id === 'chat' ? 'window-chat' : `win-${id}`);
+            const app = apps.find(a => a.id === id);
+            const win = document.getElementById(`win-${id}`);
             document.getElementById(`dot-${id}`).classList.add('active');
             win.classList.add('open');
             bringToFront(win.id);
+            updateMenuBar(app.name);
             
-            // Init WebGL if opening chat for first time
+            // App-specific initialization
             if(id === 'chat' && !window.glInitialized) initWebGL();
-            if(id === 'clock') updateClock();
+            if(id === 'draw' && !window.drawInit) initDraw();
+            if(id === 'calc' && !window.calcInit) initCalc();
+            if(id === 'tictactoe' && !window.tttInit) initTicTacToe();
+            if(id === 'terminal' && !window.termInit) initTerminal();
         }
 
         function closeApp(id) {
-            const win = document.getElementById(id === 'chat' ? 'window-chat' : `win-${id}`);
+            const win = document.getElementById(`win-${id}`);
             win.classList.remove('open');
             document.getElementById(`dot-${id}`).classList.remove('active');
+            updateMenuBar('Finder');
         }
 
         function bringToFront(winId) {
@@ -220,23 +282,18 @@
             document.getElementById(winId).style.zIndex = zIndexCounter;
         }
 
-        // Clock Logic
-        function updateClock() {
-            const c = document.getElementById('live-clock');
-            if(!c) return;
-            const now = new Date();
-            c.innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-            setTimeout(updateClock, 1000);
+        function updateMenuBar(appName) {
+            document.getElementById('active-app-name').innerText = appName;
         }
 
-        // Drag Logic
+        // --- DRAG LOGIC ---
         let draggingWin = null, startX, startY, initX, initY;
-        function startDrag(e, winId) {
+        function startDrag(e, winId, appName) {
             if(e.target.classList.contains('mac-btn')) return;
             draggingWin = document.getElementById(winId);
             bringToFront(winId);
+            updateMenuBar(appName);
             
-            // Turn on all shields so iframes don't eat mouse events
             document.querySelectorAll('.iframe-shield').forEach(s => s.style.display = 'block');
             
             startX = e.clientX; startY = e.clientY;
@@ -258,7 +315,87 @@
             }
         });
 
-        // WEBL LIQUID BORDER FOR CHAT
+        // --- MINI-APP LOGIC ---
+
+        // Draw Paint App
+        function initDraw() {
+            window.drawInit = true;
+            const canvas = document.getElementById('draw-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            let painting = false;
+            
+            function startPosition(e) { painting = true; draw(e); }
+            function endPosition() { painting = false; ctx.beginPath(); }
+            function draw(e) {
+                if(!painting) return;
+                const rect = canvas.getBoundingClientRect();
+                ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.strokeStyle = 'black';
+                ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+                ctx.stroke(); ctx.beginPath();
+                ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+            }
+            canvas.addEventListener('mousedown', startPosition);
+            canvas.addEventListener('mouseup', endPosition);
+            canvas.addEventListener('mousemove', draw);
+        }
+
+        // Tic Tac Toe
+        function initTicTacToe() {
+            window.tttInit = true;
+            const board = document.getElementById('ttt-board');
+            let turn = 'X';
+            for(let i=0; i<9; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'ttt-cell';
+                cell.onclick = function() {
+                    if(this.innerText !== '') return;
+                    this.innerText = turn;
+                    this.style.color = turn === 'X' ? '#ff3b30' : '#007aff';
+                    turn = turn === 'X' ? 'O' : 'X';
+                };
+                board.appendChild(cell);
+            }
+        }
+
+        // Terminal
+        function initTerminal() {
+            window.termInit = true;
+            const input = document.getElementById('term-input');
+            const output = document.getElementById('term-out');
+            input.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    const val = input.value;
+                    output.innerHTML += val + '<br/>macbook-pro:~ user$ ';
+                    input.value = '';
+                }
+            });
+        }
+
+        // Calculator
+        function initCalc() {
+            window.calcInit = true;
+            const screen = document.getElementById('calc-screen');
+            const btns = document.querySelectorAll('.calc-btn');
+            let current = '0';
+            
+            btns.forEach(btn => {
+                btn.onclick = () => {
+                    const v = btn.innerText;
+                    if(v === 'AC') current = '0';
+                    else if(v === '=') {
+                        try { current = eval(current.replace('×', '*').replace('÷', '/')).toString(); } 
+                        catch { current = 'Error'; }
+                    }
+                    else if(current === '0') current = v;
+                    else current += v;
+                    screen.innerText = current;
+                };
+            });
+        }
+
+        // --- WEBGL LIQUID CHAT (Intact) ---
         function initWebGL() {
             window.glInitialized = true;
             const canvas = document.getElementById('glcanvas');
