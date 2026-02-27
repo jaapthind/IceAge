@@ -51,7 +51,7 @@
         @keyframes rainAnim { from { background-position: 0 0; } to { background-position: -20px 200px; } }
 
         /* ==========================================================================
-           3. SETUP SCREEN & STRICT PROFANITY FILTER
+           3. SETUP SCREEN
            ========================================================================== */
         #setup-screen {
             position: absolute; inset: 0; background: rgba(13, 19, 33, 0.98); 
@@ -103,7 +103,6 @@
             gap: 2px; width: 100%; height: 100%; background: #222; border: 2px solid #00E5FF; padding: 4px; border-radius: 10px; position: relative;
         }
 
-        /* THE 4 EPIC BACKGROUND ZONES */
         #center-island {
             grid-column: 2 / 10; grid-row: 2 / 10; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
             border-radius: 5px; overflow: hidden; border: 3px solid rgba(255,255,255,0.2); z-index: 1; box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
@@ -262,34 +261,39 @@
 
 <script>
     /* =========================================================================
-       1. MILITARY-GRADE PROFANITY FILTER & SETUP LOGIC
+       1. MILITARY-GRADE PROFANITY FILTER (Fixed False Positives)
        ========================================================================= */
     const colors = ['#F44336', '#4CAF50', '#2196F3', '#FFEB3B'];
     
-    const rawBadWords = [
-        'anal','anus','arse','ass','ballsack','balls','bastard','bitch','biatch','bloody','blowjob','bollock','bollok',
-        'boner','boob','bugger','bum','butt','buttplug','clitoris','cock','coon','crap','cunt','damn','dick','dildo',
-        'dyke','fag','feck','fellate','fellatio','felching','fuck','fudgepacker','flange','goddamn','hell','homo',
-        'jerk','jizz','knob','labia','lmao','lmfao','muff','nigg','omg','penis','piss','poop','prick','pube','pussy',
-        'queer','scrotum','sex','shit','slut','smegma','spunk','tit','tosser','turd','twat','vagina','wank','whore','wtf'
+    // Severe words that get the "Strip All Spaces & Symbols" treatment
+    const severeWords = [
+        'fuck', 'shit', 'bitch', 'nigg', 'cunt', 'whore', 'slut', 'fag', 'dick', 'pussy', 'cock', 'blowjob', 'dildo', 'masturbat', 'rape', 'incest', 'bollock', 'smegma', 'tosser'
+    ];
+
+    // Shorter words checked EXACTLY so we don't accidentally ban "hello", "glass", or "title"
+    const exactWords = [
+        'anal', 'anus', 'arse', 'ass', 'ballsack', 'balls', 'bastard', 'boob', 'bugger', 'bum', 'butt', 'buttplug', 'clitoris', 'crap', 'cum', 'damn', 'dyke', 'feck', 'fellate', 'fellatio', 'felching', 'flange', 'hell', 'homo', 'jerk', 'jizz', 'knob', 'labia', 'lmao', 'lmfao', 'muff', 'omg', 'penis', 'piss', 'poop', 'prick', 'pube', 'queer', 'scrotum', 'sex', 'spunk', 'tit', 'turd', 'twat', 'vagina', 'wank', 'wtf'
     ];
 
     function isNameClean(name) {
-        // Strip out all non-alphanumeric characters (removes spaces, periods, symbols)
-        let stripped = name.toLowerCase().replace(/[^a-z0-9]/gi, '');
-        
-        // Translate L33t Speak back to letters
-        stripped = stripped.replace(/1/g, 'i').replace(/0/g, 'o').replace(/@/g, 'a')
-                           .replace(/\$/g, 's').replace(/5/g, 's').replace(/3/g, 'e')
-                           .replace(/4/g, 'a').replace(/7/g, 't');
-        
         let normal = name.toLowerCase();
         
-        for (let i = 0; i < rawBadWords.length; i++) {
-            if (stripped.includes(rawBadWords[i]) || normal.includes(rawBadWords[i])) {
-                return false;
-            }
+        // 1. Check exact words with Strict Boundaries (\b) to protect normal words
+        for (let w of exactWords) {
+            let regex = new RegExp(`\\b${w}\\b`, 'i');
+            if (regex.test(normal)) return false;
         }
+
+        // 2. Strip symbols and L33T speak to catch heavily censored severe curses (e.g., sh1t, f.u.c.k)
+        let stripped = normal.replace(/[^a-z0-9]/gi, '')
+                             .replace(/1/g, 'i').replace(/0/g, 'o').replace(/@/g, 'a')
+                             .replace(/\$/g, 's').replace(/5/g, 's').replace(/3/g, 'e')
+                             .replace(/4/g, 'a').replace(/7/g, 't');
+        
+        for (let w of severeWords) {
+            if (stripped.includes(w)) return false;
+        }
+
         return true;
     }
 
@@ -311,10 +315,13 @@
     countSelect.addEventListener('change', renderInputs);
     renderInputs();
 
+    // FIXED DUPLICATION BUG: Holding array guarantees clean validation before saving
     document.getElementById('btn-start').addEventListener('click', () => {
         let count = parseInt(countSelect.value);
         let errorDiv = document.getElementById('setup-error');
         errorDiv.style.display = 'none';
+
+        let tempPlayers = [];
 
         for (let i = 0; i < count; i++) {
             let nameVal = document.getElementById(`p${i}-name`).value.trim();
@@ -326,11 +333,14 @@
                 errorDiv.innerText = `Error: The name "${nameVal}" contains prohibited language. Please use a clean name.`;
                 errorDiv.style.display = 'block'; return;
             }
-            state.players.push({
+            tempPlayers.push({
                 id: i, name: nameVal, color: colors[i], 
                 pos: 0, acorns: 4, laps: 0, skip: false, ally: null
             });
         }
+
+        // Lock in players only after 100% successful validation
+        state.players = tempPlayers;
 
         document.getElementById('setup-screen').style.opacity = '0';
         setTimeout(() => {
@@ -412,7 +422,6 @@
 
     function initGame() {
         const board = document.getElementById('board');
-        // We start loop from 0 to 35 to append the grid perimeter spaces
         for (let i = 0; i < 36; i++) {
             let sp = SpaceData[i] || { t: "Free space" }; 
             let div = document.createElement('div');
@@ -525,7 +534,6 @@
         document.getElementById('turn-indicator').innerText = `${p.name}'s Turn`;
         document.getElementById('turn-indicator').style.color = p.color;
         
-        // Random weather change every 6 total turns
         if (state.totalTurns > 1 && state.turn === 0 && state.totalTurns % 6 === 0) {
             triggerRandomWeather();
         }
@@ -576,7 +584,6 @@
         }, 1000);
     });
 
-    // STEP-BY-STEP BOARD MOVEMENT
     function moveTokenStepByStep(p, spacesLeft, evaluateAfter = true) {
         if (spacesLeft === 0) {
             let enemy = state.players.find(o => o.id !== p.id && o.pos === p.pos);
@@ -606,7 +613,6 @@
 
         drawToken(p);
         
-        // Timeout creates the hopping animation visually
         setTimeout(() => {
             moveTokenStepByStep(p, spacesLeft > 0 ? spacesLeft - 1 : spacesLeft + 1, evaluateAfter);
         }, 200); 
