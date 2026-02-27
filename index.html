@@ -117,7 +117,7 @@
         .token { width: clamp(14px, 3.5vmin, 30px); height: clamp(14px, 3.5vmin, 30px); border-radius: 50%; border: 2px solid #FFF; color: #FFF; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: clamp(0.6rem, 1.8vmin, 1.2rem); z-index: 100; will-change: transform; transition: transform 0.2s linear; box-shadow: 0 4px 8px rgba(0,0,0,0.9); text-shadow: 1px 1px 2px #000; }
 
         /* ==========================================================================
-           5. OVERLAYS & MODALS
+           5. OVERLAYS & MODALS (The Fix)
            ========================================================================== */
         /* TRUE 3D DICE */
         #dice-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.2s; backdrop-filter: blur(5px);}
@@ -128,12 +128,14 @@
         .cube-face { position: absolute; width: 100%; height: 100%; background: #FFF; border: 5px solid var(--gold); border-radius: 2vmin; display: flex; align-items: center; justify-content: center; font-family: 'Carter One'; font-size: 12vmin; color: #000; backface-visibility: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);}
         .cube-face-1 { transform: rotateY(  0deg) translateZ(12.5vmin); } .cube-face-2 { transform: rotateY( 90deg) translateZ(12.5vmin); } .cube-face-3 { transform: rotateY(180deg) translateZ(12.5vmin); } .cube-face-4 { transform: rotateY(-90deg) translateZ(12.5vmin); } .cube-face-5 { transform: rotateX( 90deg) translateZ(12.5vmin); } .cube-face-6 { transform: rotateX(-90deg) translateZ(12.5vmin); }
 
-        /* MODALS (The fix for the freezing - Forces user to click before proceeding) */
+        /* MODALS (Strictly synchronized to avoid freezing) */
         #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 99999; opacity: 0; pointer-events: none; transition: 0.2s; padding: 2vmin; backdrop-filter: blur(8px);}
         #modal-overlay.active { opacity: 1; pointer-events: all; }
+        
         .modal { padding: 5vmin; text-align: center; width: 100%; max-width: 650px; max-height: 90vh; overflow-y: auto; transform: scale(0.9) translateY(20px); opacity: 0; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); background: #111; border: 3px solid var(--cyan); border-radius: 2vmin; box-shadow: 0 20px 50px rgba(0,229,255,0.3); }
         #modal-overlay.active .modal { transform: scale(1) translateY(0); opacity: 1; }
-        .modal h2 { font-size: clamp(2rem, 6vmin, 3.5rem); color: var(--gold); margin: 0 0 2.5vmin 0; font-family: 'Carter One'; text-shadow: 2px 2px 0 #000;}
+        
+        .modal h2 { font-size: clamp(1.5rem, 5vmin, 3.5rem); color: var(--gold); margin: 0 0 2.5vmin 0; font-family: 'Carter One'; text-shadow: 2px 2px 0 #000;}
         .modal-btns { display: flex; gap: 2vmin; justify-content: center; flex-wrap: wrap; margin-top: 3vmin;}
 
         /* DUEL ARENA */
@@ -338,9 +340,7 @@
         {c:1, r:9}, {c:1, r:8}, {c:1, r:7}, {c:1, r:6}, {c:1, r:5}, {c:1, r:4}, {c:1, r:3}, {c:1, r:2} 
     ];
 
-    /* THE FIX: The "wait" variable now universally controls whether an action 
-       must call nextTurn() itself (via a modal) or if it's instant.
-    */
+    /* THE FIX: `wait` dictates if a space naturally creates its own UI pause */
     const SpaceData = [
         { t: "START", class: "s-start" }, 
         { t: "+1 🌰", wait: false, f: (p) => addAcorns(p, 1) }, 
@@ -442,7 +442,7 @@
         });
 
         document.getElementById('btn-rules').addEventListener('click', () => {
-            createChoiceModal("RULEBOOK", [{t: "Close", a: () => closeModal()}]);
+            createChoiceModal("RULEBOOK", [{t: "Close", a: () => {}}]);
             document.getElementById('modal-content-area').innerHTML = `
                 <div style="text-align: left; font-size: clamp(1.2rem, 3vmin, 1.8rem); line-height: 1.6; color: #FFF;">
                     <p><strong>Start:</strong> Distribute 4 golden acorns.</p>
@@ -513,7 +513,6 @@
         l.scrollTop = 0;
     }
 
-    /* THE FIX: BULLETPROOF TURN STATE */
     function setTurn() {
         let p = state.players[state.turn]; document.getElementById('turn-indicator').innerText = `${p.name}'s Turn`;
         document.getElementById('turn-indicator').style.color = p.color; 
@@ -539,8 +538,12 @@
     function nextTurn() {
         state.totalTurns++; 
         let p = state.players[state.turn];
-        if (p.extraTurn) { p.extraTurn = false; log(`⭐ ${p.name} takes an extra turn!`, "event"); }
-        else { do { state.turn = (state.turn + 1) % state.players.length; } while (state.players[state.turn].dead || state.finishers.includes(state.players[state.turn])); }
+        if (p.extraTurn) { 
+            p.extraTurn = false; 
+            log(`⭐ ${p.name} takes an extra turn!`, "event"); 
+        } else { 
+            do { state.turn = (state.turn + 1) % state.players.length; } while (state.players[state.turn].dead || state.finishers.includes(state.players[state.turn])); 
+        }
         setTurn();
     }
 
@@ -549,7 +552,7 @@
        ========================================================================= */
     document.getElementById('btn-roll').addEventListener('click', () => {
         let p = state.players[state.turn];
-        document.getElementById('btn-roll').disabled = true; // Lock button to prevent double-clicks
+        document.getElementById('btn-roll').disabled = true; 
         let baseRoll = Math.floor(Math.random() * 6) + 1;
         let bonus = (p.ally && p.ally.name === "Caveman") ? 1 : 0;
         let finalRoll = baseRoll + bonus;
@@ -563,14 +566,12 @@
         });
     });
 
-    /* THE FIX: +1 ROLL WORKS PROPERLY IN THE QUEUE */
     function triggerExtraRoll(p) {
         log(`⭐ ${p.name} gets a free extra roll!`, "event");
         p.extraTurn = true;
         nextTurn();
     }
 
-    /* THE FIX: TELEPORT SAFELY WITHOUT MESSING UP LAPS */
     function teleportTo(p, targetPos) {
         p.pos = targetPos;
         drawToken(p, true);
@@ -669,7 +670,7 @@
                             if(r1 > r2) { d1.style.color="var(--gold)"; document.getElementById('dp2').style.opacity="0.3"; } else { d2.style.color="var(--gold)"; document.getElementById('dp1').style.opacity="0.3"; }
                             AudioEngine.sfxWin();
                             document.getElementById('modal-btns').innerHTML = `<h2 style="width:100%; color:var(--gold);">${winner.name} WINS!</h2><button class="btn btn-cyan" id="btn-end-duel">Steal Acorn & Continue</button>`;
-                            document.getElementById('btn-end-duel').onclick = () => { closeModal(); loseAcorns(loser, 1); addAcorns(winner, 1); log(`⚔️ ${winner.name} stole 1 🌰 from ${loser.name}!`, "event"); triggerSpaceLogic(p, sp); };
+                            document.getElementById('btn-end-duel').onclick = () => { closeModal(); loseAcorns(loser, 1); addAcorns(winner, 1); log(`⚔️ ${winner.name} stole 1 🌰 from ${loser.name}!`, "event"); setTimeout(() => triggerSpaceLogic(p, sp), 250); };
                         }
                     }, 80);
                 };
@@ -679,7 +680,7 @@
         triggerSpaceLogic(p, sp);
     }
 
-    /* THE FIX: THE BULLETPROOF MODAL QUEUE (No more skipped turns or freezing) */
+    /* THE FIX: BULLETPROOF SYNCHRONOUS LOGIC QUEUE */
     function triggerSpaceLogic(p, sp) {
         if (sp.class === 's-jaap') {
             if (p.ally && p.ally.name === "Mammoth") { 
@@ -694,37 +695,52 @@
             if (p.ally && p.ally.name === "Elder") { log(`Elder ignores Event!`); setTimeout(nextTurn, 500); return; }
             
             let ev = Events[Math.floor(Math.random() * Events.length)];
-            createChoiceModal("EVENT DRAWN", [{t: "Resolve Card", a: () => { 
-                if (ev.wait) { ev.f(p); } 
-                else { ev.f(p); updateHUD(); nextTurn(); } 
-            }}]);
+            createChoiceModal("EVENT DRAWN", [{
+                t: "Resolve Card", 
+                close: !ev.wait, // The core fix: Leaves the modal open if the event has its own menu
+                a: () => { 
+                    if (ev.wait) { ev.f(p); } 
+                    else { ev.f(p); updateHUD(); nextTurn(); } 
+                }
+            }]);
             document.getElementById('modal-desc').innerHTML = `<span style="color: var(--cyan); font-size: clamp(2rem, 5vmin, 4rem);">${ev.t}<br><br><span style="color:#FFF; font-size: 60%;">${ev.desc}</span></span>`;
         }
         else if (sp.f) { 
-            // Action Space (+1 acorn, Ally, etc)
-            createChoiceModal("SPACE TRIGGERED", [{t: "Continue", a: () => { 
-                if (sp.wait) { sp.f(p); } 
-                else { sp.f(p); updateHUD(); nextTurn(); } 
-            }}]);
-            document.getElementById('modal-desc').innerHTML = `<span style="color: var(--gold); font-size: clamp(2rem, 5vmin, 4rem);">${sp.t}</span>`;
+            if (sp.wait) {
+                // Instantly show the menu for Ally, Trade, etc. No double popups.
+                sp.f(p);
+            } else {
+                // Instant background action (+1 Acorn, etc). No annoying popup required.
+                sp.f(p);
+                updateHUD();
+                setTimeout(nextTurn, 800);
+            }
         }
         else { 
-            // Blank space, start space, end space
             setTimeout(nextTurn, 500); 
         }
     }
 
     /* =========================================================================
-       MODULE 7: UI UTILITIES & MODALS
+       MODULE 7: THE BULLETPROOF MODAL ENGINE
        ========================================================================= */
     function openModal(title, descHtml) {
         document.getElementById('modal-overlay').classList.add('active'); document.getElementById('modal-title').innerText = title;
         document.getElementById('modal-content-area').innerHTML = `<div id="modal-desc">${descHtml}</div>`; document.getElementById('modal-btns').innerHTML = '';
     }
+    
     function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+    
     function createChoiceModal(title, btns) {
         openModal(title, ""); let c = document.getElementById('modal-btns'); c.innerHTML = '';
-        btns.forEach(b => { let btn = document.createElement('button'); btn.className = 'btn'; btn.innerText = b.t; btn.onclick = () => { closeModal(); b.a(); }; c.appendChild(btn); });
+        btns.forEach(b => { 
+            let btn = document.createElement('button'); btn.className = 'btn'; btn.innerText = b.t; 
+            btn.onclick = () => { 
+                if (b.close !== false) closeModal(); // Safely closes unless specifically told not to
+                b.a(); 
+            }; 
+            c.appendChild(btn); 
+        });
     }
 
     function endGame() {
@@ -755,7 +771,7 @@
 
     function showTradeMenu(p) {
         let btns = [
-            { t: "Buy Ally (4🌰)", a: () => { if(p.acorns>=4){ loseAcorns(p,4); showAllyMenu(p);} else {log("Not enough acorns!"); AudioEngine.sfxHurt(); nextTurn();} } },
+            { t: "Buy Ally (4🌰)", close: false, a: () => { if(p.acorns>=4){ loseAcorns(p,4); showAllyMenu(p);} else {log("Not enough acorns!"); AudioEngine.sfxHurt(); closeModal(); nextTurn();} } },
             { t: "Sell Ally (+2🌰)", a: () => { if(p.ally){p.ally=null; addAcorns(p,2); log("Sold ally.", "gain");} else {log("No ally to sell!", "lose");} updateHUD(); nextTurn(); } },
             { t: "Leave Market", a: () => nextTurn() }
         ];
