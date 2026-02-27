@@ -4,20 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Ice Age Board Game - Ultimate Public Edition</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌰</text></svg>">
+    
     <style>
         /* ==========================================================================
-           1. STRICT IFRAME LAYOUT ENGINE (Zero Scroll)
+           1. STRICT IFRAME LAYOUT & LIQUID RAINBOW BACKGROUND
            ========================================================================== */
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #0d1321; color: #FFF; position: absolute; inset: 0; 
-            box-sizing: border-box; user-select: none; transition: background 1s;
+            color: #FFF; position: absolute; inset: 0; box-sizing: border-box; user-select: none;
+            
+            /* THE LIQUID RAINBOW ENGINE */
+            background: linear-gradient(-45deg, #ff003c, #ff8a00, #e52e71, #9c27b0, #00d2ff, #3a7bd5);
+            background-size: 400% 400%;
+            animation: liquidRainbow 15s ease infinite;
+        }
+
+        @keyframes liquidRainbow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         * { box-sizing: inherit; }
 
-        body.sudden-death { background: #3a0000; }
+        body.sudden-death { background: #3a0000 !important; animation: none; }
 
         /* ==========================================================================
            2. DYNAMIC WEATHER OVERLAYS (Pure CSS - Zero Lag)
@@ -51,31 +63,41 @@
         @keyframes rainAnim { from { background-position: 0 0; } to { background-position: -20px 200px; } }
 
         /* ==========================================================================
-           3. SETUP SCREEN
+           3. SETUP SCREEN & LIQUID GLASS MORPHISM
            ========================================================================== */
         #setup-screen {
-            position: absolute; inset: 0; background: rgba(13, 19, 33, 0.98); 
+            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); 
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
             z-index: 99999; padding: 2vmin; transition: opacity 0.5s ease;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
         }
+        
+        /* GLASS UI CLASSES */
+        .glass-panel {
+            background: rgba(10, 15, 25, 0.65);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
         .setup-box {
-            background: #111; border: 3px solid #00E5FF; padding: 4vmin; text-align: center; 
-            border-radius: 10px; max-width: 600px; width: 100%; box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+            padding: 4vmin; text-align: center; border-radius: 15px; 
+            max-width: 600px; width: 100%; border-color: rgba(0, 229, 255, 0.5);
         }
-        .setup-box h1 { color: #FFC107; font-size: clamp(2rem, 6vmin, 4rem); margin: 0 0 1vmin 0; font-weight: 900;}
-        .setup-box h3 { color: #00E5FF; margin: 0 0 3vmin 0; }
+        .setup-box h1 { color: #FFF; font-size: clamp(2rem, 6vmin, 4rem); margin: 0 0 1vmin 0; font-weight: 900; text-shadow: 0 0 15px rgba(255,255,255,0.5);}
+        .setup-box h3 { color: #00E5FF; margin: 0 0 3vmin 0; text-shadow: 0 0 10px #00E5FF; }
         
         .setup-row {
             display: flex; justify-content: space-between; align-items: center; 
-            background: #222; padding: 1.5vmin; margin-bottom: 1.5vmin; border-radius: 5px;
+            background: rgba(0,0,0,0.5); padding: 1.5vmin; margin-bottom: 1.5vmin; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
         }
         .setup-row input, .setup-row select {
-            background: #000; color: #FFF; border: 1px solid #00E5FF; padding: 1vmin; 
-            font-size: clamp(1rem, 2.5vmin, 1.5rem); border-radius: 5px; font-weight: bold; width: 70%; text-align: center; outline: none;
+            background: rgba(0,0,0,0.8); color: #FFF; border: 1px solid #00E5FF; padding: 1vmin; 
+            font-size: clamp(1rem, 2.5vmin, 1.5rem); border-radius: 5px; font-weight: bold; width: 70%; text-align: center; outline: none; transition: 0.2s;
         }
-        .setup-row input:focus { border-color: #FFC107; }
+        .setup-row input:focus { border-color: #FFC107; box-shadow: 0 0 10px rgba(255,193,7,0.5); }
         .color-dot { width: 4vmin; height: 4vmin; border-radius: 50%; border: 2px solid #FFF; }
-        #setup-error { color: #FF1744; font-weight: bold; margin-bottom: 15px; display: none; background: rgba(255,0,0,0.2); padding: 10px; border-radius: 5px; border: 1px solid #FF1744;}
+        #setup-error { color: #FFF; font-weight: bold; margin-bottom: 15px; display: none; background: rgba(255, 23, 68, 0.8); padding: 10px; border-radius: 5px; border: 1px solid #FF1744;}
 
         /* ==========================================================================
            4. MASTER GAME LAYOUT
@@ -100,35 +122,36 @@
         
         #board {
             display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr);
-            gap: 2px; width: 100%; height: 100%; background: #222; border: 2px solid #00E5FF; padding: 4px; border-radius: 10px; position: relative;
+            gap: 2px; width: 100%; height: 100%; border-radius: 10px; position: relative;
         }
 
         #center-island {
             grid-column: 2 / 10; grid-row: 2 / 10; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
-            border-radius: 5px; overflow: hidden; border: 3px solid rgba(255,255,255,0.2); z-index: 1; box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
+            border-radius: 8px; overflow: hidden; border: 2px solid rgba(255,255,255,0.2); z-index: 1; box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
         }
         .biome {
             display: flex; align-items: center; justify-content: center; font-size: clamp(1rem, 3vmin, 2.5rem); 
             font-weight: 900; color: #FFF; text-shadow: 2px 2px 5px #000, 0 0 15px #000; text-transform: uppercase;
             background-size: cover; background-position: center; padding: 10px; text-align: center; border: 1px solid rgba(0,0,0,0.5);
         }
-        .b-grass { background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80'); }
-        .b-peaks { background-image: url('https://images.unsplash.com/photo-1517823382935-51bfcb0ec6bc?w=800&q=80'); }
-        .b-village { background-image: url('https://images.unsplash.com/photo-1533588265328-971c26f63fbd?w=800&q=80'); }
-        .b-tundra { background-image: url('https://images.unsplash.com/photo-1478265409131-1f65c88f965c?w=800&q=80'); }
+        .b-grass { background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'); }
+        .b-peaks { background-image: url('https://images.unsplash.com/photo-1517823382935-51bfcb0ec6bc?auto=format&fit=crop&w=800&q=80'); }
+        /* FIXED ANCIENT VILLAGE IMAGE */
+        .b-village { background-image: url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80'); }
+        .b-tundra { background-image: url('https://images.unsplash.com/photo-1478265409131-1f65c88f965c?auto=format&fit=crop&w=800&q=80'); }
 
         .space {
-            background: #FFF; border: 1px solid #000; color: #000; display: flex; flex-direction: column;
+            background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(0,0,0,0.8); color: #000; display: flex; flex-direction: column;
             align-items: center; justify-content: center; text-align: center; font-size: clamp(0.5rem, 1.8vmin, 1rem);
             font-weight: 900; position: relative; border-radius: 4px; box-shadow: inset 0 0 5px rgba(0,0,0,0.3); z-index: 10;
         }
         
-        .s-start { background: #FFC107; font-size: clamp(0.7rem, 2vmin, 1.2rem); }
-        .s-jaap { background: #FF1744; color: #FFF; border-radius: 50%; aspect-ratio: 1/1;}
+        .s-start { background: rgba(255, 193, 7, 0.9); font-size: clamp(0.7rem, 2vmin, 1.2rem); }
+        .s-jaap { background: rgba(255, 23, 68, 0.9); color: #FFF; border-radius: 50%; aspect-ratio: 1/1;}
         .s-event { color: #FF1744; font-size: clamp(1rem, 3vmin, 1.5rem); }
-        .s-market { background: #D500F9; color: #FFF; }
-        .s-cave { background: #00E5FF; color: #000; }
-        .s-jackpot { background: #00E676; color: #000; }
+        .s-market { background: rgba(213, 0, 249, 0.9); color: #FFF; }
+        .s-cave { background: rgba(0, 229, 255, 0.9); color: #000; }
+        .s-jackpot { background: rgba(0, 230, 118, 0.9); color: #000; }
 
         .token-container { position: absolute; bottom: 2px; display: flex; flex-wrap: wrap; justify-content: center; width: 100%; gap: 1px; z-index: 20;}
         
@@ -142,57 +165,57 @@
         /* ==========================================================================
            6. UI PANELS
            ========================================================================== */
-        .panel { background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 1vmin; z-index: 20; position: relative;}
+        .panel { padding: 1.5vmin; border-radius: 12px; z-index: 20; position: relative; }
         
         #hud { display: flex; flex-wrap: wrap; gap: 1vmin; height: 45%; overflow-y: auto; align-content: flex-start;}
         .player-card { 
-            flex: 1; min-width: 45%; background: rgba(0,0,0,0.5); border-top: 4px solid; 
-            padding: 1vmin; text-align: center; border-radius: 5px; position: relative;
+            flex: 1; min-width: 45%; background: rgba(0,0,0,0.4); border-top: 4px solid; 
+            padding: 1vmin; text-align: center; border-radius: 8px; position: relative;
         }
-        .player-card.active { border: 2px solid #FFC107; border-top: 4px solid #FFC107; background: rgba(255,193,7,0.1); }
-        .ally-badge { background: #222; color: #00E5FF; font-size: clamp(0.6rem, 1.5vmin, 0.9rem); padding: 2px 5px; border-radius: 4px; margin-top: 5px;}
+        .player-card.active { border: 2px solid #FFC107; border-top: 4px solid #FFC107; background: rgba(255,193,7,0.2); box-shadow: 0 0 15px rgba(255,193,7,0.3);}
+        .ally-badge { background: rgba(0,0,0,0.8); color: #00E5FF; font-size: clamp(0.6rem, 1.5vmin, 0.9rem); padding: 2px 5px; border-radius: 4px; margin-top: 5px;}
         
         #controls { height: 55%; display: flex; flex-direction: column; align-items: center; }
-        #turn-indicator { margin: 0 0 1vmin 0; font-size: clamp(1.5rem, 3.5vmin, 2rem); font-weight: bold; text-align: center; }
+        #turn-indicator { margin: 0 0 1vmin 0; font-size: clamp(1.5rem, 3.5vmin, 2rem); font-weight: bold; text-align: center; text-shadow: 0 0 10px rgba(0,0,0,0.8);}
         
         #log { 
-            flex: 1; width: 100%; background: #000; color: #FFF; font-family: monospace; 
-            overflow-y: auto; padding: 1vmin; border-radius: 5px; margin-top: 1vmin; font-size: clamp(0.8rem, 2vmin, 1.1rem);
-            border: 1px solid #333;
+            flex: 1; width: 100%; background: rgba(0,0,0,0.6); color: #FFF; font-family: monospace; 
+            overflow-y: auto; padding: 1.5vmin; border-radius: 8px; margin-top: 1vmin; font-size: clamp(0.8rem, 2vmin, 1.1rem);
+            border: 1px solid rgba(255,255,255,0.1);
         }
-        .log-entry { border-bottom: 1px dotted #333; padding: 4px 0; }
+        .log-entry { border-bottom: 1px dotted rgba(255,255,255,0.2); padding: 4px 0; }
 
         .btn {
             background: #FFC107; border: 2px solid #FFF; padding: 1.5vmin; font-size: clamp(1.2rem, 3vmin, 1.8rem); 
-            font-weight: 900; border-radius: 5px; cursor: pointer; width: 100%; margin-bottom: 1vmin; 
-            text-transform: uppercase; color: #000; transition: 0.1s;
+            font-weight: 900; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 1vmin; 
+            text-transform: uppercase; color: #000; transition: 0.1s; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
         .btn:active { transform: scale(0.95); }
-        .btn:disabled { background: #555; cursor: not-allowed; color: #888; border-color: #555; transform: none;}
+        .btn:disabled { background: rgba(85,85,85,0.8); cursor: not-allowed; color: #CCC; border-color: #555; transform: none; box-shadow: none;}
         .btn-cyan { background: #00E5FF; color: #000; }
 
         /* ==========================================================================
            7. DICE ANIMATION & MODALS
            ========================================================================== */
-        #dice-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 90000; }
-        .dice-box { width: 100px; height: 100px; background: #FFF; border: 5px solid #000; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 60px; font-weight: bold; color: #000; animation: shake 0.5s infinite; box-shadow: 0 0 30px rgba(255,193,7,0.5);}
+        #dice-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 90000; }
+        .dice-box { width: 100px; height: 100px; background: rgba(255,255,255,0.9); border: 5px solid #000; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 60px; font-weight: bold; color: #000; animation: shake 0.5s infinite; box-shadow: 0 0 40px rgba(255,193,7,0.8);}
         @keyframes shake { 0% { transform: rotate(0deg) scale(1); } 25% { transform: rotate(15deg) scale(1.1); } 50% { transform: rotate(0deg) scale(1); } 75% { transform: rotate(-15deg) scale(1.1); } 100% { transform: rotate(0deg) scale(1); } }
 
         #simple-modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 99999; padding: 2vmin;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 99999; padding: 2vmin;
         }
         .modal-content {
-            background: #111; border: 3px solid #00E5FF; padding: 4vmin; text-align: center; border-radius: 10px; max-width: 600px; width: 100%; box-shadow: 0 0 50px rgba(0,229,255,0.2);
+            padding: 4vmin; text-align: center; border-radius: 15px; max-width: 600px; width: 100%; border-color: rgba(0,229,255,0.5);
         }
-        .modal-content h2 { color: #FFC107; font-size: clamp(1.8rem, 4.5vmin, 3rem); margin: 0 0 2vmin 0; text-transform: uppercase; }
-        .modal-content p { font-size: clamp(1.1rem, 3vmin, 1.5rem); margin-bottom: 3vmin; line-height: 1.4; }
+        .modal-content h2 { color: #FFC107; font-size: clamp(1.8rem, 4.5vmin, 3rem); margin: 0 0 2vmin 0; text-transform: uppercase; text-shadow: 0 0 10px rgba(255,193,7,0.5);}
+        .modal-content p { font-size: clamp(1.1rem, 3vmin, 1.5rem); margin-bottom: 3vmin; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.8);}
         #modal-btn-container { display: flex; gap: 1vmin; justify-content: center; flex-wrap: wrap; }
 
         .float-text {
-            position: absolute; font-size: 24px; font-weight: bold; pointer-events: none;
-            animation: floatUp 1s ease-out forwards; z-index: 100; text-shadow: 2px 2px 0 #000;
+            position: absolute; font-size: 28px; font-weight: bold; pointer-events: none;
+            animation: floatUp 1s ease-out forwards; z-index: 100; text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0,0,0,0.8);
         }
-        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-50px) scale(1.5); } }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-60px) scale(1.5); } }
     </style>
 </head>
 <body>
@@ -204,7 +227,7 @@
     </div>
 
     <div id="setup-screen">
-        <div class="setup-box">
+        <div class="setup-box glass-panel">
             <h1>ICE AGE</h1>
             <h3>THE BOARD GAME</h3>
             <div id="setup-error"></div>
@@ -226,7 +249,7 @@
     <div id="game-container">
         <div id="left-col">
             <div id="board-wrapper">
-                <div id="board">
+                <div id="board" class="glass-panel" style="padding: 4px;">
                     <div id="center-island">
                         <div class="biome b-grass">Grassy Plains</div>
                         <div class="biome b-peaks">Frozen Peaks</div>
@@ -238,12 +261,12 @@
         </div>
 
         <div id="right-col">
-            <div id="hud" class="panel"></div>
+            <div id="hud" class="panel glass-panel"></div>
             
-            <div id="controls" class="panel">
+            <div id="controls" class="panel glass-panel">
                 <div id="turn-indicator">Game Start</div>
-                <div style="font-size: clamp(0.9rem, 2vmin, 1.2rem); margin-bottom: 1vmin; color: #888;">
-                    Turn <span id="turn-counter">1</span>/40 | Jackpot: <span id="jackpot-counter" style="color:#00E676; font-weight:bold;">0 🌰</span>
+                <div style="font-size: clamp(0.9rem, 2vmin, 1.2rem); margin-bottom: 1vmin; color: rgba(255,255,255,0.8); font-weight: bold;">
+                    Turn <span id="turn-counter">1</span>/40 | Jackpot: <span id="jackpot-counter" style="color:#00E676; font-weight:bold; text-shadow: 0 0 5px #00E676;">0 🌰</span>
                 </div>
                 <button id="btn-roll" class="btn">ROLL 🎲</button>
                 <div id="log"></div>
@@ -252,7 +275,7 @@
     </div>
 
     <div id="simple-modal">
-        <div class="modal-content">
+        <div class="modal-content glass-panel">
             <h2 id="sm-title">Title</h2>
             <p id="sm-text">Description</p>
             <div id="modal-btn-container"></div>
@@ -469,9 +492,9 @@
             let crownIcon = isLeader ? '👑 ' : '';
             hud.innerHTML += `
                 <div class="player-card ${i === state.turn ? 'active' : ''}" style="border-top-color:${p.color};">
-                    <div style="color:${p.color}; font-weight:900; font-size: 1.1rem;">${crownIcon}${p.name}</div>
-                    <div style="font-size: clamp(1.5rem, 4vmin, 2.2rem); color: #FFC107; margin: 2px 0; font-weight:bold;">${p.acorns} 🌰</div>
-                    <div style="font-size: 0.9rem;">Laps: ${p.laps}/3</div>
+                    <div style="color:${p.color}; font-weight:900; font-size: 1.1rem; text-shadow: 0 0 5px rgba(0,0,0,0.8);">${crownIcon}${p.name}</div>
+                    <div style="font-size: clamp(1.5rem, 4vmin, 2.2rem); color: #FFC107; margin: 2px 0; font-weight:bold; text-shadow: 0 0 10px rgba(255,193,7,0.3);">${p.acorns} 🌰</div>
+                    <div style="font-size: 0.9rem; color: #CCC;">Laps: ${p.laps}/3</div>
                     <div class="ally-badge">${p.ally ? `🤝 ${p.ally.name}` : 'No Ally'}</div>
                 </div>`;
         });
@@ -482,7 +505,7 @@
     function log(msg) {
         const l = document.getElementById('log');
         let t = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-        l.innerHTML = `<div class="log-entry"><span style="color:#888;">[${t}]</span> ${msg}</div>` + l.innerHTML;
+        l.innerHTML = `<div class="log-entry"><span style="color:rgba(255,255,255,0.4);">[${t}]</span> ${msg}</div>` + l.innerHTML;
     }
 
     function showFloatText(p, text, color) {
